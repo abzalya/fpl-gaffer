@@ -1,6 +1,7 @@
 import pulp 
 from data_loader import load_data
 import config
+import csv
 
 
 players = load_data('data/players.csv')
@@ -32,6 +33,7 @@ hit_penalty = config.HIT_PENALTY
 
 #Game Week Weights
 gw_weights = config.GW_WEIGHTS
+gw_weights_single = [1.0, 0.0, 0.0, 0.0, 0.0] #if we want to optimize for a single game week, set the weight for that game week to 1 and the rest to 0
 
 ##MAIN OPTIMIZATION CODE
 #Problem 
@@ -40,15 +42,25 @@ problem = pulp.LpProblem("FPL_Optimizer", pulp.LpMaximize)
 #Decision Variables
 #Selected players (binary)
 selected = {player['id']: pulp.LpVariable(f"selected_{player['id']}", cat='Binary') for player in players} #.iterrows()
+starters = {player['id']: pulp.LpVariable(f"starter_{player['id']}", cat='Binary') for player in players} #.iterrows()
 
-#Objective: Maximize game week points
-problem += pulp.lpSum([selected[player['id']] * pulp.lpSum([player[f'gw{i+1}'] * gw_weights[i] for i in range(len(gw_weights))]) for player in players]), "Total_Points"
+#Objective: Maximize game week points. 
+if bench_boost == 1: #If bench boost is active, then maximize points for all 15 players
+    problem += pulp.lpSum([selected[player['id']] * pulp.lpSum([player[f'gw{i+1}'] * gw_weights[i] for i in range(len(gw_weights))]) for player in players]), "Total_Points"
+elif free_hit ==1: #Starters only for 1 game week. 
+    problem += pulp.lpSum([starters[player['id']] * pulp.lpSum([player[f'gw{i+1}'] * gw_weights_single[i] for i in range(len(gw_weights_single))]) for player in players]), "Total_Points"
+elif wildcard == 1 or existing_team_test_var == 0: #new team or wildcard optimization. 
+    problem += pulp.lpSum([starters[player['id']] * pulp.lpSum([player[f'gw{i+1}'] * gw_weights[i] for i in range(len(gw_weights))]) for player in players]), "Total_Points"
+else: #TODO: base case (wildcard/new team ) for now, implement existing team and hit penalty later
+    problem += pulp.lpSum([starters[player['id']] * pulp.lpSum([player[f'gw{i+1}'] * gw_weights[i] for i in range(len(gw_weights))]) for player in players]), "Total_Points"
 
 #Constraints
 #Budget constraint
 problem += pulp.lpSum(selected[player['id']] * player['price'] for player in players) <= budget, "Budget_Constraint"
 
+#Players constraints
 problem += pulp.lpSum(selected[player['id']] for player in players) == total_players, "Total_Players_Constraint"
+problem += pulp.lpSum(starters[player['id']] for player in players) == starter_players, "Starter_Players_Constraint"
 
 #Max players per team
 teams = set(player['club'] for player in players)
@@ -107,3 +119,16 @@ print("Grand Total Points:", grand_total)
 #TODO: if existing team = 0, or wildcard = 1 then maximise points for 11 players all gws
 #TODO: if freehit = 1, then maximise points for 11 players all gws + 4 players cheapest to fill positions
 #TODO: if existing team, then maximise points for 11 players all gws + 4 players cheapest to fill positions, but add hit penalty for players not in existing team. Limit to 5 transfers? 
+
+#export
+result_team = []
+for p in optimized_team:
+    player_row = p.copy()
+    player_row["starter"] = bool(starters[p["id"]].value())
+    result_team.append(player_row)
+
+with open(f"output_.csv", "w", newline="") as f:
+    fieldnames = result_team[0].keys()
+    writer = csv.DictWriter(f, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(result_team)
