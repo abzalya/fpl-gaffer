@@ -1,0 +1,27 @@
+# Notes / scratch (not tracked)
+_notes/
+
+# Environment
+.env
+.env.*
+
+# Data files
+*.csv
+*.json
+fpl_raw_data.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
