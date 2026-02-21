@@ -1,0 +1,16 @@
+id,name,club,position,price,gw1,gw2,gw3,gw4,gw5
+20,Tyler Smith,Newcastle,GKP,6.0,5.3,6.5,2.98,5.05,4.07
+33,Harry Williams,Liverpool,GKP,6.0,5.66,4.65,5.58,4.99,6.15
+49,Oliver Taylor,Ipswich,DEF,6.0,4.37,3.98,5.52,3.55,5.66
+100,Aaron Anderson,Leicester,DEF,6.0,6.74,4.91,3.77,4.89,2.48
+103,George Scott,Arsenal,DEF,6.0,4.53,3.21,4.82,3.15,5.67
+114,Reece Collins,Spurs,DEF,6.0,3.59,4.4,4.36,6.61,3.6
+122,Liam Mitchell,Man Utd,DEF,6.0,5.65,4.02,3.59,2.99,5.76
+6,Aiden Jones,Man Utd,MID,6.0,2.85,5.42,2.6,2.04,4.5
+47,Tyler White,Aston Villa,MID,6.0,3.49,2.6,1.84,2.48,1.0
+106,Mason Edwards,Fulham,MID,6.0,4.45,4.74,4.76,1.93,2.59
+173,Marcus Parker,Wolves,MID,6.0,4.81,3.29,3.9,3.34,4.05
+116,Logan Brown,Man City,MID,5.5,2.07,3.01,2.98,3.19,2.37
+135,Oliver Hall,Nottm Forest,FWD,6.0,4.85,4.36,2.94,5.23,1.91
+160,Callum Green,Wolves,FWD,6.0,4.01,1.57,2.01,2.34,3.06
+12,Oliver Green,Spurs,FWD,5.5,2.54,4.33,2.33,2.62,1.06
