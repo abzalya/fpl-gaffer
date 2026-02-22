@@ -25,3 +25,8 @@ build/
 # IDE
 .vscode/
 .idea/
+
+# dbt
+target/
+dbt_packages/
+logs/
