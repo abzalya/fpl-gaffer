@@ -96,7 +96,7 @@ def _jsonb(val: Any) -> Any:
 
 
 # 1. GAMEWEEKS
-def clean_gameweek(raw: dict, season_id: int) -> dict:
+def clean_gameweeks(raw: dict, season_id: int) -> dict:
     """
     Cleans one row from bootstrap-static → events.
     top_element_info is a nested dict like {"id": 531, "points": 17}.
@@ -126,12 +126,12 @@ def clean_team(raw: dict, season_id: int) -> dict:
 
 
 # 3. PLAYERS SNAPSHOT
-def clean_player_snapshot(raw: dict, gameweek_id: int, season_id: int) -> dict:
+def clean_player_snapshot(raw: dict, fetched_gameweek_id: int, season_id: int) -> dict:
     """Cleans one row from bootstrap-static → elements (~700 per fetch)."""
     return {
         "opta_code":                         _str(raw.get("opta_code")),
         "player_id":                        _int(raw.get("id")),
-        "gameweek_id":                      gameweek_id,
+        "fetched_gameweek_id":              fetched_gameweek_id,
         "season_id":                        season_id,
         # Player Info
         "web_name":                         _str(raw.get("web_name")),
@@ -187,7 +187,7 @@ def clean_future_fixture(raw: dict, player_id: int, fetched_gameweek_id: int, op
     team_h_score and team_a_score will be empty strings for unplayed fixtures.
     """
     return {
-        "opta_code":           opta_code,
+        "opta_code":            opta_code,
         "player_id":            player_id,
         "fetched_gameweek_id":  fetched_gameweek_id,
         # Fixture Info

@@ -58,13 +58,13 @@ teams = Table(
 # Inserted every week for all players.
 # Upsert key: (id, season_id, gw_id)
 
-player_snapshots = Table( #what should the primary key be ? 
+player_snapshots = Table(
     "player_snapshots", archive_metadata,
     # Indexing Info
     Column("id", BigInteger, primary_key=True ,autoincrement=True), #Auto id of every row
     Column("opta_code", String(100)),  # Unique code for the player (consistent across seasons)
     Column("player_id", Integer, nullable=False),            # FPL element id unique for that season
-    Column("gameweek_id", SmallInteger, nullable=False),     # FK → archive.gameweeks
+    Column("fetched_gameweek_id", SmallInteger, nullable=False),     
     Column("season_id", SmallInteger, nullable=False),            # FK → public.seasons
     Column("fetched_at", TIMESTAMP(timezone=True), server_default=func.now()),
     # Player Info
@@ -112,10 +112,10 @@ player_snapshots = Table( #what should the primary key be ?
     # Raw Data
     Column("raw_data", JSONB, nullable=False),
 
-    UniqueConstraint("opta_code", "gameweek_id", "season_id", name="uq_snapshots_player_gw_season"),
+    UniqueConstraint("opta_code", "fetched_gameweek_id", "season_id", name="uq_snapshots_player_fgw_season"),
 )
 # Indexes for faster lookups
-Index("ix_snapshots_gameweek_id", player_snapshots.c.gameweek_id)
+Index("ix_snapshots_fetched_gameweek_id", player_snapshots.c.fetched_gameweek_id)
 Index("ix_snapshots_opta_code", player_snapshots.c.opta_code)
 Index("ix_snapshots_season_id", player_snapshots.c.season_id)
 
@@ -142,10 +142,10 @@ player_future_fixtures = Table(
     # Raw Data
     Column("raw_data", JSONB, nullable=False),
 
-    UniqueConstraint("opta_code", "fetched_gameweek_id", "fixture_id", name="uq_future_fixtures_player_gw_fixture"),
+    UniqueConstraint("opta_code", "fetched_gameweek_id", "fixture_id", name="uq_future_fixtures_player_fgw_fixture"),
 )
 
-Index("ix_future_fixtures_player_gw", player_future_fixtures.c.opta_code,player_future_fixtures.c.fetched_gameweek_id)
+Index("ix_future_fixtures_player_fgw", player_future_fixtures.c.opta_code, player_future_fixtures.c.fetched_gameweek_id)
 
 # 5. PLAYER GAMEWEEK HISTORY
 # Source: element-summary/{id}/ - history
