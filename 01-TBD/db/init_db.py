@@ -1,10 +1,10 @@
-from sqlalchemy import create_engine, text
-from dotenv import load_dotenv
-import os
+# Init the db. Creating schemas and tables. Run this before running the pipeline for the first time, or after making changes to the schema.
 
-load_dotenv()
+# Version 1.0.0
 
-engine = create_engine(os.getenv("database_url"))
+from sqlalchemy import text
+from schema import archive_metadata, processed_metadata, ml_metadata, optimizer_metadata, public_metadata
+from engine import engine
 
 def create_schemas():
     with engine.connect() as conn:

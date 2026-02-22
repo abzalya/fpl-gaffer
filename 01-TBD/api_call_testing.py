@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 
-def export_full_fpl_data(target_web_name="Raya"):
+def export_full_fpl_data(target_web_name: str):
     # --- 1. Fetch Bootstrap Static Data ---
     print("Fetching Bootstrap Static data...")
     base_url = "https://fantasy.premierleague.com/api/bootstrap-static/"
@@ -46,4 +46,4 @@ def export_full_fpl_data(target_web_name="Raya"):
     print("\nCSV Exports Complete!")
 
 if __name__ == "__main__":
-    export_full_fpl_data("Raya")
+    export_full_fpl_data("Haaland")

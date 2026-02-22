@@ -26,13 +26,16 @@ public_metadata = MetaData(schema="public")
 # Upsert key: id
 gameweeks = Table(
     "gameweeks", archive_metadata,
-    Column("id", SmallInteger, primary_key=True),           # FPL GW id 1–38
+    Column("id", BigInteger, primary_key=True ,autoincrement=True),
+    Column("gameweek_id", SmallInteger, nullable=False),           # FPL GW id 1–38
     Column("season_id", SmallInteger, nullable=False),            # FK → public.seasons
     Column("finished", Boolean, default=False),
     Column("is_current", Boolean, default=False),
     Column("is_next", Boolean, default=False),
     # Raw Data
     Column("raw_data", JSONB, nullable=False),
+
+    UniqueConstraint("gameweek_id", "season_id", name="uq_gameweeks_gw_season"),
 )
 
 # 2. TEAMS
@@ -41,7 +44,8 @@ gameweeks = Table(
 # Upsert key: (id, season_id)
 teams = Table(
     "teams", archive_metadata,
-    Column("id", Integer, nullable=False),                   # FPL team id
+    Column("id", BigInteger, primary_key=True ,autoincrement=True), #Auto id of every row
+    Column("team_id", Integer, nullable=False,),                   # FPL team id
     Column("season_id", SmallInteger, nullable=False),            # FK → public.seasons
     Column("code", Integer),
     Column("name", String(100)),
@@ -49,7 +53,7 @@ teams = Table(
     Column("strength", SmallInteger),
     # Raw Data
     Column("raw_data", JSONB, nullable=False),
-    UniqueConstraint("id", "season_id", name="uq_teams_id_season"),
+    UniqueConstraint("team_id", "season_id", name="uq_teams_id_season"),
 )
 
 # 3. PLAYERS SNAPSHOT
@@ -62,7 +66,7 @@ player_snapshots = Table(
     "player_snapshots", archive_metadata,
     # Indexing Info
     Column("id", BigInteger, primary_key=True ,autoincrement=True), #Auto id of every row
-    Column("opta_code", String(100)),  # Unique code for the player (consistent across seasons)
+    Column("opta_code", Integer),  # Unique code for the player (consistent across seasons)
     Column("player_id", Integer, nullable=False),            # FPL element id unique for that season
     Column("fetched_gameweek_id", SmallInteger, nullable=False),     
     Column("season_id", SmallInteger, nullable=False),            # FK → public.seasons
@@ -129,7 +133,7 @@ player_future_fixtures = Table(
     "player_future_fixtures", archive_metadata,
     # Indexing Info
     Column("id", BigInteger, primary_key=True, autoincrement=True), #Auto id of every row
-    Column("opta_code", String(100)),  # Unique code for the player (consistent across seasons)
+    Column("opta_code", Integer),  # Unique code for the player (consistent across seasons)
     Column("player_id", Integer, nullable=False), 
     # Fixture Info
     Column("fetched_gameweek_id", SmallInteger, nullable=False),
@@ -155,7 +159,7 @@ player_gw_history = Table(
     "player_gw_history", archive_metadata,
     # Indexing Info
     Column("id", BigInteger, primary_key=True, autoincrement=True), #Auto id of every row
-    Column("opta_code", String(100)),  # Unique code for the player (consistent across seasons)
+    Column("opta_code", Integer),  # Unique code for the player (consistent across seasons)
     Column("player_id", Integer, nullable=False),
     # Fixture Info
     Column("fixture_id", Integer, nullable=False),
@@ -201,9 +205,9 @@ player_gw_history = Table(
     # Raw Data
     Column("raw_data", JSONB, nullable=False),
 
-    UniqueConstraint("opta_code", "gameweek_id", "season_id", name="uq_history_player_gw_season"),
+    UniqueConstraint("opta_code", "fixture_id", "season_id", name="uq_history_player_fixture_season"),
 )
 
-Index("ix_history_gameweek_id", player_gw_history.c.gameweek_id)
+Index("ix_history_fixture_id", player_gw_history.c.fixture_id)
 Index("ix_history_opta_code", player_gw_history.c.opta_code)
 Index("ix_history_season_id", player_gw_history.c.season_id)

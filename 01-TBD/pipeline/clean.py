@@ -103,7 +103,7 @@ def clean_gameweeks(raw: dict, season_id: int) -> dict:
     We pull the points out separately for easy querying.
     """
     return {
-        "id":                   _int(raw.get("id")),
+        "gameweek_id":          _int(raw.get("id")),
         "season_id":            season_id,
         "finished":             _bool(raw.get("finished")),
         "is_current":           _bool(raw.get("is_current")),
@@ -115,7 +115,7 @@ def clean_gameweeks(raw: dict, season_id: int) -> dict:
 def clean_team(raw: dict, season_id: int) -> dict:
     """Cleans one row from bootstrap-static → teams."""
     return {
-        "id":                       _int(raw.get("id")),
+        "team_id":                   _int(raw.get("id")),
         "season_id":                season_id,
         "code":                     _int(raw.get("code")),
         "name":                     _str(raw.get("name")),
@@ -129,7 +129,7 @@ def clean_team(raw: dict, season_id: int) -> dict:
 def clean_player_snapshot(raw: dict, fetched_gameweek_id: int, season_id: int) -> dict:
     """Cleans one row from bootstrap-static → elements (~700 per fetch)."""
     return {
-        "opta_code":                         _str(raw.get("opta_code")),
+        "opta_code":                        _int(raw.get("code")),
         "player_id":                        _int(raw.get("id")),
         "fetched_gameweek_id":              fetched_gameweek_id,
         "season_id":                        season_id,
@@ -209,7 +209,7 @@ def clean_gw_history(raw: dict, player_id: int, opta_code: str, season_id: int) 
     This is the per-fixture performance record — your ML gold.
     """
     return {
-        "opta_code":                         opta_code,
+        "opta_code":                        opta_code,
         "player_id":                        player_id,
         # Fixture Info
         "fixture_id":                       _int(raw.get("fixture")),
