@@ -19,6 +19,70 @@ public_metadata = MetaData(schema="public")
 
 
 # TABLE DEFINITIONS
+# PUBLIC SCHEMA
+# 1. SEASONS
+# List of seasons. One row per season.
+# Upsert key: id
+public_seasons = Table(
+    "seasons", public_metadata,
+    Column("id", SmallInteger, primary_key=True ,autoincrement=False),
+    Column("name", String(100)), # E.g. "2025/26"
+    Column("start_year", SmallInteger), # E.g. 2025
+    Column("end_year", SmallInteger), # E.g. 2026
+    Column("is_current", Boolean, default=False),
+
+    UniqueConstraint("id", name="uq_public_seasons_id"),
+)
+
+# 2. GAMEWEEKS 
+# Source: bootstrap-static - events 
+# 38 rows per season. Upserted every week. 
+# Upsert key: id
+public_gameweeks = Table(
+    "gameweeks", public_metadata,
+    Column("gameweek_id", SmallInteger, nullable=False),           # FPL GW id 1–38
+    Column("season_id", SmallInteger, nullable=False),            # FK → public.seasons
+    Column("finished", Boolean, default=False),
+    Column("is_current", Boolean, default=False),
+    Column("is_next", Boolean, default=False),
+
+    UniqueConstraint("gameweek_id", "season_id", name="uq_public_gameweeks_gw_season"),
+)
+
+# 3. TEAMS
+public_teams = Table(
+    "teams", public_metadata,
+    Column("team_id", Integer, nullable=False,),                   # FPL team id
+    Column("season_id", SmallInteger, nullable=False),            # FK → public.seasons
+    Column("code", Integer),
+    Column("name", String(100)),
+    Column("short_name", String(10)),
+    UniqueConstraint("team_id", "season_id", name="uq_public_teams_id_season"),
+)
+# 4. PLAYERS
+public_players = Table(
+    "players", public_metadata,
+    # Indexing Info
+    Column("opta_code", Integer),  # Unique code for the player (consistent across seasons)
+    Column("player_id", Integer, nullable=False),            # FPL element id unique for that season
+    Column("season_id", SmallInteger, nullable=False),            # FK → public.seasons
+    # Player Info
+    Column("web_name", String(100)),
+    Column("first_name", String(100)),
+    Column("second_name", String(100)),
+    Column("team_id", Integer),
+    Column("element_type", SmallInteger), # 1=GK 2=DEF 3=MID 4=FWD
+    Column("status", String(1)), # a / d / i / s / u
+    Column("now_cost", SmallInteger), # 60 = £6.0m
+   
+
+    UniqueConstraint("opta_code", "season_id", name="uq_public_players_opta_season"),
+)
+# Indexes for faster lookups
+Index("ix_players_opta_code", public_players.c.opta_code)
+Index("ix_players_season_id", public_players.c.season_id)
+
+
 # ARHCIVE SCHEMA
 # 1. GAMEWEEKS 
 # Source: bootstrap-static - events 
