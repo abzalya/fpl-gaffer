@@ -2,10 +2,10 @@
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'fpl_team_optimizer'
+name: 'fpl_gaffer'
 version: '1.0.0'
 
-profile: 'fpl_team_optimizer'
+profile: 'fpl_gaffer'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -19,7 +19,7 @@ clean-targets:
   - "dbt_packages"
 
 models:
-  fpl_team_optimizer:
+  fpl_gaffer:
     processed:
       +materialized: table
       +schema: processed

@@ -1,4 +1,4 @@
-# FPL Team Optimizer - Project Context
+# FPL Gaffer - Project Context
 
 ## Overview
 Production-grade Fantasy Premier League optimization platform. Uses ML (XGBoost) to predict player points and linear programming (PuLP) to construct optimal squads. Portfolio/CV project demonstrating full-stack data engineering + ML + web development.
@@ -29,7 +29,7 @@ Production-grade Fantasy Premier League optimization platform. Uses ML (XGBoost)
 
 ## Project Structure
 ```
-001 - fpl optimizer/
+001 - fpl-gaffer/
 ├── CLAUDE.md                  # This file
 ├── .venv/                     # Python 3.13 virtual environment
 ├── _notes/                    # PRD, task tracking, design notes
@@ -47,7 +47,7 @@ Production-grade Fantasy Premier League optimization platform. Uses ML (XGBoost)
 │       ├── clean.py           # Data cleaning before insertion
 │       └── load.py            # Upsert into archive schema
 ├── 02-dbt/                    # dbt transformation project
-│   ├── dbt_project.yml        # Project name: fpl_team_optimizer
+│   ├── dbt_project.yml        # Project name: fpl_gaffer
 │   ├── models/
 │   │   └── processed/         # Intermediate + feature models
 │   ├── macros/
@@ -112,12 +112,12 @@ ml.predictions                   Per-player per-GW predictions + actuals
 - Each fold per horizon is a separate `ml.training_runs` record with a `horizon` column
 
 ## Database
-- **Name**: `fpl_team_optimizer`
+- **Name**: `fpl_gaffer`
 - **Host**: localhost:5432
 - **User**: aamirbay
 
 ## dbt Setup
-- **Project**: `02-dbt/`, name `fpl_team_optimizer`, profile `fpl_team_optimizer`
+- **Project**: `02-dbt/`, name `fpl_gaffer`, profile `fpl_gaffer`
 - **Profile file**: `~/.dbt/profiles.yml`
 - **Run dbt**: `cd 02-dbt && ../.venv/bin/dbt run`
 - **Test connection**: `../.venv/bin/dbt debug`

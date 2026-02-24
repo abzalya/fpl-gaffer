@@ -52,4 +52,93 @@ models:
               arguments:
                 values: ['a', 'd', 'i', 's', 'u']
 
-  
+  - name: player_gw_features
+    description: >
+      ML feature matrix. One row per player per gameweek. Backward-only window
+      features represent what was knowable entering GW N. Three LEAD-based target
+      columns support 3 separate horizon models (h1–h3). Fixture difficulty for
+      the upcoming 3 GWs is included as a forward-looking context feature
+      (legitimately available at fetch time). Direct training input for
+      XGBoost walk-forward models. Incremental — merges on
+      (opta_code, gameweek_id, season_id), reprocesses the last 10 GWs per player
+      on each run to keep rolling window features correct.
+    columns:
+      - name: opta_code
+        description: Unique player identifier.
+        data_tests:
+          - not_null
+      - name: gameweek_id
+        description: FPL gameweek number (1–38).
+        data_tests:
+          - not_null
+      - name: season_id
+        description: Season identifier.
+        data_tests:
+          - not_null
+
+      # --- Form features (rolling, backward-only) ---
+      - name: pts_rolling_3
+        description: Rolling average points over previous 3 gameweeks (excludes current).
+      - name: pts_rolling_5
+        description: Rolling average points over previous 5 gameweeks (excludes current).
+      - name: pts_rolling_10
+        description: Rolling average points over previous 10 gameweeks (excludes current).
+      - name: minutes_rolling_5
+        description: Rolling average minutes over previous 5 gameweeks.
+      - name: bps_rolling_5
+        description: Rolling average BPS over previous 5 gameweeks.
+      - name: ict_rolling_5
+        description: Rolling average ICT index over previous 5 gameweeks.
+      - name: xg_rolling_5
+        description: Rolling average expected goals over previous 5 gameweeks.
+      - name: xa_rolling_5
+        description: Rolling average expected assists over previous 5 gameweeks.
+      - name: xgi_rolling_5
+        description: Rolling average expected goal involvements over previous 5 gameweeks.
+
+      # --- Season-to-date cumulative features ---
+      - name: pts_season_total
+        description: Cumulative points for the season up to (not including) this GW.
+      - name: goals_season_total
+        description: Cumulative goals scored for the season up to this GW.
+      - name: assists_season_total
+        description: Cumulative assists for the season up to this GW.
+      - name: minutes_season_total
+        description: Cumulative minutes for the season up to this GW.
+
+      # --- Upcoming fixture difficulty (from archive.player_future_fixtures) ---
+      # Fetched before GW N — legitimate forward-looking context, not leakage.
+      - name: fixture_difficulty_h1
+        description: FPL difficulty rating for the player's next fixture (GW+1).
+      - name: fixture_is_home_h1
+        description: Whether the player's team is at home for GW+1.
+      - name: fixture_difficulty_h2
+        description: FPL difficulty rating for GW+2.
+      - name: fixture_is_home_h2
+        description: Whether the player's team is at home for GW+2.
+      - name: fixture_difficulty_h3
+        description: FPL difficulty rating for GW+3.
+      - name: fixture_is_home_h3
+        description: Whether the player's team is at home for GW+3.
+
+      # --- Player meta ---
+      - name: element_type
+        description: "Position — 1: GK, 2: DEF, 3: MID, 4: FWD."
+      - name: now_cost
+        description: Player price (in tenths of millions) at time of fetch.
+      - name: status
+        description: "Player availability at time of fetch — a: available, d: doubtful, i: injured, s: suspended, u: unavailable."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['a', 'd', 'i', 's', 'u']
+
+      # --- Target variables (one per prediction horizon) ---
+      # Computed with LEAD(). These are labels, not features — no leakage.
+      # Python selects the appropriate column per model (h1 model uses pts_target_h1, etc.)
+      - name: pts_target_h1
+        description: Points scored in GW+1. Target for the 1-gameweek-ahead model.
+      - name: pts_target_h2
+        description: Points scored in GW+2. Target for the 2-gameweek-ahead model.
+      - name: pts_target_h3
+        description: Points scored in GW+3. Target for the 3-gameweek-ahead model.
