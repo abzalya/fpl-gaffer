@@ -18,17 +18,19 @@ async def run_pipeline():
     upsert_public_season(engine, season_id)
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        
+
+        print("Fetching bootstrap data...")
         bootstrap = await fetch_bootstrap_static(client)
-        
+        print("Bootstrap data fetched.")
+
         gameweek_data = bootstrap["events"]
-        team_data     = bootstrap["teams"]
-        player_snapshot_data   = bootstrap["elements"]
+        team_data = bootstrap["teams"]
+        player_snapshot_data = bootstrap["elements"]
 
         fetched_gameweek_id = next(
             (e["id"] for e in gameweek_data if e["is_current"]), None
         )
-        
+
         if fetched_gameweek_id is None:
             print("No current gameweek found in bootstrap data. Aborting.")
             return
@@ -37,16 +39,19 @@ async def run_pipeline():
         upsert_public_gameweeks(engine, gameweek_data, season_id)
         upsert_public_teams(engine, team_data, season_id)
         upsert_public_players(engine, player_snapshot_data, fetched_gameweek_id, season_id)
-
+        print("Public tables upserted (gameweeks, teams, players).")
 
         # Upsert archive gameweeks, teams, player snapshots
         upsert_gameweeks(engine, gameweek_data, season_id)
         upsert_teams(engine, team_data, season_id)
         upsert_player_snapshot(engine, player_snapshot_data, fetched_gameweek_id, season_id)
-        
+        print("Archive tables upserted (gameweeks, teams, player snapshots).")
+
         # Fetching details for all players concurrently with rate limiting and retry logic
+        print(f"Fetching details for {len(player_snapshot_data)} players...")
         player_ids = [p["id"] for p in player_snapshot_data]
         results    = await fetch_all_player_details(client, player_ids)
+        print("Player details fetched.")
 
         # Upsert player details, log failures
         for player, result in zip(player_snapshot_data, results):
@@ -59,6 +64,10 @@ async def run_pipeline():
 
             upsert_future_fixtures(engine, player_id, opta_code, result["fixtures"], fetched_gameweek_id)
             upsert_gw_history(engine, player_id, season_id, opta_code, result["history"])
+
+        print("Player fixtures and GW history upserted.")
+
+    print("Pipeline completed successfully.")
 
 if __name__ == "__main__":
     asyncio.run(run_pipeline())
