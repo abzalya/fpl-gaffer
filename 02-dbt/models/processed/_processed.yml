@@ -1,0 +1,55 @@
+# Version: 1.0.0
+# TODO: add  features table
+version: 2
+
+models:
+
+  - name: player_gw_base
+    description: >
+      Intermediate fact table. One row per player per played gameweek.
+      Joins archive.player_gw_history with team, gameweek, and player snapshot
+      context. Pure join layer. Source for all feature models.
+      Incremental — merges on (opta_code, gameweek_id, season_id), only processes
+      new gameweeks on each run.
+    columns:
+      - name: opta_code
+        description: Unique player identifier consistent across seasons.
+        data_tests:
+          - not_null
+      - name: gameweek_id
+        description: Gameweek number.
+        data_tests:
+          - not_null
+      - name: season_id
+        description: Season identifier.
+        data_tests:
+          - not_null
+      - name: total_points
+        description: Points scored.
+        data_tests:
+          - not_null
+      - name: minutes
+        description: Minutes played.
+        data_tests:
+          - not_null
+      - name: element_type
+        description: "Position — 1: GK, 2: DEF, 3: MID, 4: FWD."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: was_home
+        description: Home/Away.
+      - name: opponent_team_id
+        description: team_id.
+      - name: opponent_strength
+        description: FPL strength. 
+      - name: status
+        description: "Player availability at time of fetch — a: available, d: doubtful, i: injured, s: suspended, u: unavailable."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['a', 'd', 'i', 's', 'u']
+
+  
