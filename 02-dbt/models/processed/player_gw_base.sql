@@ -2,7 +2,7 @@
 -- Layer: processed (intermediate)
 -- Grain: one row per (opta_code, gameweek_id, season_id)
 -- Purpose: joins archive tables into a single denormalised fact table.
--- Version: V1.0.0
+-- Version: V1.1.0
 
 -- Sources:
 --   - archive.player_gw_history
@@ -26,6 +26,7 @@ SELECT
     ph.season_id,
     ph.total_points,
     ph.minutes,
+    ph.starts,
     ph.was_home,
     ph.team_h_score,
     ph.team_a_score,
@@ -41,6 +42,7 @@ SELECT
     ps.element_type,
     ps.team_id,
     ps.status,
+    ps.chance_of_playing_next_round,
     ph.value now_cost,
 	--vs team details
     ph.opponent_team_id,
@@ -49,7 +51,7 @@ SELECT
 from archive.player_gw_history ph
 left join (
     select distinct on (opta_code)
-        opta_code, element_type, team_id, status
+        opta_code, element_type, team_id, status, chance_of_playing_next_round
     from archive.player_snapshots
     order by opta_code, fetched_gameweek_id desc
 ) ps on ps.opta_code = ph.opta_code

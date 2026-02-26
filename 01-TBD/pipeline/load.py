@@ -1,4 +1,4 @@
-# Version: v1.0.0
+# Version: v1.1.0
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from db.schema import public_seasons, public_gameweeks, public_teams, public_players, gameweeks, teams, player_snapshots, player_future_fixtures, player_gw_history
@@ -25,7 +25,7 @@ def upsert_public_gameweeks(engine, gameweek_data: list[dict], season_id: int):
         print("No gameweek data to upsert.")
         return
     
-    PUBLIC_GW_COLS = {"gameweek_id", "season_id", "finished", "is_current", "is_next"}
+    PUBLIC_GW_COLS = {"gameweek_id", "season_id", "finished", "is_current", "is_next", "average_entry_score"}
     
     cleaned = [
         {k: v for k, v in clean_gameweeks(row, season_id).items() if k in PUBLIC_GW_COLS}

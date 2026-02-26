@@ -1,7 +1,7 @@
 # SQLAlchemy schema and table definitions.
 # Storing selected columns + raw_data JSONB 
 
-# Version: v1.0.0
+# Version: v1.1.0
 
 from sqlalchemy import ( 
     MetaData, Table, Column, BigInteger, Integer, SmallInteger, String, Numeric, 
@@ -45,6 +45,7 @@ public_gameweeks = Table(
     Column("finished", Boolean, default=False),
     Column("is_current", Boolean, default=False),
     Column("is_next", Boolean, default=False),
+    Column("average_entry_score", SmallInteger),                   # Avg score across all FPL managers
 
     UniqueConstraint("gameweek_id", "season_id", name="uq_public_gameweeks_gw_season"),
 )
@@ -96,6 +97,7 @@ gameweeks = Table(
     Column("finished", Boolean, default=False),
     Column("is_current", Boolean, default=False),
     Column("is_next", Boolean, default=False),
+    Column("average_entry_score", SmallInteger),                   # Avg score across all FPL managers
     # Raw Data
     Column("raw_data", JSONB, nullable=False),
 

@@ -1,7 +1,7 @@
 # Data Cleaning before Insertion into DB
 # The raw dict is always preserved in its entirety inside "raw_data" so nothing from the API is ever permanently lost.
 
-# Version: v1.0.0
+# Version: v1.1.0
 
 import math
 import ast
@@ -108,6 +108,7 @@ def clean_gameweeks(raw: dict, season_id: int) -> dict:
         "finished":             _bool(raw.get("finished")),
         "is_current":           _bool(raw.get("is_current")),
         "is_next":              _bool(raw.get("is_next")),
+        "average_entry_score":  _int(raw.get("average_entry_score")),
         "raw_data":             raw,
     }
 
