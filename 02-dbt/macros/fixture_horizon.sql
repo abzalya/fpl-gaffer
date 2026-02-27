@@ -9,5 +9,8 @@
         case when {{ fixture_alias }}.is_home then {{ fixture_alias }}.team_a else {{ fixture_alias }}.team_h end,
         lead(pgb.opponent_team_id, {{ horizon }}) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id)
     ) opponent_team_id_h{{ horizon }},
-    lead(pgb.opponent_strength, {{ horizon }}) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) opponent_strength_h{{ horizon }}
+    coalesce(
+        t{{ horizon }}.strength,
+        lead(pgb.opponent_strength, {{ horizon }}) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id)
+    ) opponent_strength_h{{ horizon }}
 {% endmacro %}

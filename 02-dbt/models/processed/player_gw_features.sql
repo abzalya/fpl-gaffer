@@ -2,7 +2,7 @@
 -- Layer: processed (ML feature matrix)
 -- Grain: one row per (opta_code, gameweek_id, season_id)
 -- Purpose: Computes all ML features from player_gw_base using backward-only window functions.
--- Version: V1.0.1
+-- Version: V1.0.2
 
 -- Sources:
 -- {{ ref('player_gw_base') }}
@@ -155,6 +155,13 @@ left join archive.player_future_fixtures f2
     on  f2.opta_code = pgb.opta_code and f2.fetched_gameweek_id = pgb.gameweek_id and f2.fixture_gameweek_id = pgb.gameweek_id + 2
 left join archive.player_future_fixtures f3
     on  f3.opta_code = pgb.opta_code and f3.fetched_gameweek_id = pgb.gameweek_id and f3.fixture_gameweek_id = pgb.gameweek_id + 3
+--opponent team strength per horizon (used by fixture_horizon macro to coalesce opponent_strength)
+left join archive.teams t1
+    on  t1.team_id = case when f1.is_home then f1.team_a else f1.team_h end and t1.season_id = pgb.season_id
+left join archive.teams t2
+    on  t2.team_id = case when f2.is_home then f2.team_a else f2.team_h end and t2.season_id = pgb.season_id
+left join archive.teams t3
+    on  t3.team_id = case when f3.is_home then f3.team_a else f3.team_h end and t3.season_id = pgb.season_id
 
 {% if is_incremental() %}
 where pgb.gameweek_id > (
