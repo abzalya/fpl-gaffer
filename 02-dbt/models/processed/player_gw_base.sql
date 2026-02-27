@@ -15,11 +15,11 @@
         materialized='incremental',
         schema='processed',
         unique_key=['opta_code', 'gameweek_id', 'season_id'],
-        incremental_strategy='merge'
+        incremental_strategy='delete+insert'
     )
 }}
 
-SELECT
+select
     ph.opta_code,
     ph.player_id,
     ph.gameweek_id,
@@ -36,8 +36,8 @@ SELECT
     ph.yellow_cards, ph.red_cards,
     ph.bonus, ph.bps,
     ph.influence, ph.creativity, ph.threat, ph.ict_index,
-    ph.expected_goals, ph.expected_assists,
-    ph.expected_goal_involvements, ph.expected_goals_conceded,
+    ph.expected_goals xG, ph.expected_assists xA,
+    ph.expected_goal_involvements xGI, ph.expected_goals_conceded xGC,
 	--details
     ps.element_type,
     ps.team_id,
@@ -61,8 +61,8 @@ left join archive.teams t
     on t.team_id   = ph.opponent_team_id and t.season_id = ph.season_id
 
 {% if is_incremental() %}
-WHERE ph.gameweek_id > (
-    SELECT MAX(gameweek_id) FROM {{ this }}
-    WHERE season_id = ph.season_id
+where ph.gameweek_id > (
+    select MAX(gameweek_id) from {{ this }}
+    where season_id = ph.season_id
 )
 {% endif %}
