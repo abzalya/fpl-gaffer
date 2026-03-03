@@ -1,7 +1,7 @@
 # SQLAlchemy schema and table definitions.
 # Storing selected columns + raw_data JSONB 
 
-# Version: v1.1.0
+# Version: v1.1.1
 
 from sqlalchemy import ( 
     MetaData, Table, Column, BigInteger, Integer, SmallInteger, String, Numeric, 
@@ -212,7 +212,7 @@ player_future_fixtures = Table(
     # Raw Data
     Column("raw_data", JSONB, nullable=False),
 
-    UniqueConstraint("opta_code", "fetched_gameweek_id", "fixture_id", name="uq_future_fixtures_player_fgw_fixture"),
+    UniqueConstraint("opta_code", "fixture_id", name="uq_future_fixtures_player_fixture"),
 )
 
 Index("ix_future_fixtures_player_fgw", player_future_fixtures.c.opta_code, player_future_fixtures.c.fetched_gameweek_id)

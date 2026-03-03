@@ -1,4 +1,4 @@
-# Version: v1.1.0
+# Version: v1.1.1
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from db.schema import public_seasons, public_gameweeks, public_teams, public_players, gameweeks, teams, player_snapshots, player_future_fixtures, player_gw_history
@@ -133,18 +133,26 @@ def upsert_player_snapshot(engine, player_data: list[dict], fetched_gameweek_id:
 
 # 4. PLAYER FUTURE FIXTURES
 def upsert_future_fixtures(engine, player_id: int, opta_code: str, fixture_data: list[dict], fetched_gameweek_id: int):
-    if not fixture_data:
-        print(f"No future fixture data to upsert for player {player_id}.")
-        return
-    
-    cleaned = [clean_future_fixture(row, player_id, fetched_gameweek_id, opta_code) for row in fixture_data]
-    
-    stmt = pg_insert(player_future_fixtures).values(cleaned)
-    stmt = stmt.on_conflict_do_update(
-        constraint="uq_future_fixtures_player_fgw_fixture",
-        set_={col: stmt.excluded[col] for col in cleaned[0].keys()}
-    )
     with engine.begin() as conn:
+        # Delete stale fixtures for this player (already played — not returned by API anymore)
+        conn.execute(
+            player_future_fixtures.delete().where(
+                (player_future_fixtures.c.opta_code == opta_code) &
+                (player_future_fixtures.c.fixture_gameweek_id < fetched_gameweek_id)
+            )
+        )
+
+        if not fixture_data:
+            print(f"No future fixture data to upsert for player {player_id}.")
+            return
+
+        cleaned = [clean_future_fixture(row, player_id, fetched_gameweek_id, opta_code) for row in fixture_data]
+
+        stmt = pg_insert(player_future_fixtures).values(cleaned)
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_future_fixtures_player_fixture",
+            set_={col: stmt.excluded[col] for col in cleaned[0].keys()}
+        )
         conn.execute(stmt)
 
 # 5. PLAYER GAMEWEEK HISTORY
