@@ -2,7 +2,7 @@
 -- Layer: processed (ML feature matrix)
 -- Grain: one row per (opta_code, gameweek_id, season_id)
 -- Purpose: Computes all ML features from player_gw_base using backward-only window functions.
--- Version: V1.0.2
+-- Version: V1.0.3
 
 -- Sources:
 -- {{ ref('player_gw_base') }}
@@ -32,8 +32,8 @@ select
     lead(total_points, 2) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) pts_target_h2,
     lead(total_points, 3) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) pts_target_h3,
     --upcoming fixture context (from player_future_fixtures)
-    --fixture join covers GW27+ (live), lead covers GW1-GW26 (historical). Update when new season starts.
-    --difficulty has no equivalent in player_gw_base — NULL pre-GW27, use opponent_strength_hN as proxy.
+    --fixture join populates upcoming fixtures not yet in player_gw_base; lead() fallback covers already-played GWs.
+    --difficulty has no equivalent in player_gw_base — NULL for historical rows, use opponent_strength_hN as proxy.
     --h1: GW+1
     {{ fixture_horizon(1, 'f1') }},
     --h2: GW+2
@@ -149,12 +149,14 @@ select
     pgb.now_cost
 from {{ ref('player_gw_base') }} pgb
 --joins for future fixtures
+--fetched_gameweek_id intentionally excluded: constraint is (opta_code, fixture_id) so one row per fixture exists.
+--lead() fallback in fixture_horizon handles rows where the future GW has since been played.
 left join archive.player_future_fixtures f1
-    on  f1.opta_code = pgb.opta_code and f1.fetched_gameweek_id = pgb.gameweek_id and f1.fixture_gameweek_id = pgb.gameweek_id + 1
+    on  f1.opta_code = pgb.opta_code and f1.fixture_gameweek_id = pgb.gameweek_id + 1
 left join archive.player_future_fixtures f2
-    on  f2.opta_code = pgb.opta_code and f2.fetched_gameweek_id = pgb.gameweek_id and f2.fixture_gameweek_id = pgb.gameweek_id + 2
+    on  f2.opta_code = pgb.opta_code and f2.fixture_gameweek_id = pgb.gameweek_id + 2
 left join archive.player_future_fixtures f3
-    on  f3.opta_code = pgb.opta_code and f3.fetched_gameweek_id = pgb.gameweek_id and f3.fixture_gameweek_id = pgb.gameweek_id + 3
+    on  f3.opta_code = pgb.opta_code and f3.fixture_gameweek_id = pgb.gameweek_id + 3
 --opponent team strength per horizon (used by fixture_horizon macro to coalesce opponent_strength)
 left join archive.teams t1
     on  t1.team_id = case when f1.is_home then f1.team_a else f1.team_h end and t1.season_id = pgb.season_id
