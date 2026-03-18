@@ -84,7 +84,7 @@ Index("ix_players_opta_code", public_players.c.opta_code)
 Index("ix_players_season_id", public_players.c.season_id)
 
 
-# ARHCIVE SCHEMA
+# ARCHIVE SCHEMA
 # 1. GAMEWEEKS 
 # Source: bootstrap-static - events 
 # 38 rows per season. Upserted every week. 
@@ -191,8 +191,7 @@ Index("ix_snapshots_season_id", player_snapshots.c.season_id)
 
 # 4. PLAYER FUTURE FIXTURES
 # Source: element-summary/{id}/ - fixtures
-# Upcoming fixtures. 
-# should we not insert instead? overwriting?
+# Upcoming fixtures.
 # Upserted weekly — records what the fixture list looked like at each fetch.
 # Upsert key: (player_id, fetched_gameweek_id, fixture_id)
 player_future_fixtures = Table(

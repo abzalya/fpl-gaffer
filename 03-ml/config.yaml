@@ -1,0 +1,53 @@
+# ML Training Config
+# Version: 1.0.0
+
+model:
+  algorithm: random_forest
+  hyperparameters:
+    n_estimators: 300
+    max_depth: 10
+    min_samples_split: 5
+    min_samples_leaf: 2
+    max_features: 0.8        # fraction of features considered per split
+    random_state: 1
+    n_jobs: -1               # use all CPU cores
+
+training:
+  # horizons to train — list of integers from {1, 2, 3}
+  # 1 = predict GW+1 points, 2 = GW+2, 3 = GW+3
+  horizons:
+    - 1
+    #- 2
+    #- 3
+
+  walk_forward:
+    min_train_steps: 10
+    step: 1
+
+features:
+  exclude:
+    - opta_code
+    - player_id
+    - gameweek_id
+    - season_id
+    - pts_target_h1
+    - pts_target_h2
+    - pts_target_h3
+    - gw_finished          # leaks: tells model whether GW has been played
+    #Bonus points might be leakage
+    - bonus
+    - bonus_rolling_3
+    - bonus_rolling_5
+    - bps
+    - bps_rolling_3
+    - bps_rolling_5         
+
+  # String columns that need encoding (mapped to integers before fitting).
+  categorical_str:
+    - status               # a=0, d=1, i=2, s=3, u=4
+    # should we one-hot encode ? 
+    # element type and team_id are numerical. will that affect the models?
+  categorical_nominal:
+    - element_type         # 1=GK, 2=DEF, 3=MID, 4=FWD
+    - team_id              # 1–20 for the 20 Premier League teams
+    # needs preprocessing to avoid implying ordinality. will add 20 binary columns, one per team. same for type. 
