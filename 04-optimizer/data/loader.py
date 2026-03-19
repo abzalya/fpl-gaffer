@@ -5,11 +5,9 @@
 import pandas as pd
 from db.engine import engine
 
-#different horizon predictions are stored as separate rows in ml.predictions
-
-def load_predictions(predicted_gameweek_id: int):
+def load_predictions(current_gameweek_id: int):
     query = f"""
-        select p.opta_code, p.predicted_points, ps.web_name, ps.first_name, ps.second_name, t.name,
+        select p.opta_code, p.predicted_points, p.predicted_gameweek_id, p.horizon,  ps.web_name, ps.first_name, ps.second_name, t.name,
             case 
             when ps.element_type = 1 then 'GKP'
             when ps.element_type = 2 then 'DEF'
@@ -22,7 +20,7 @@ def load_predictions(predicted_gameweek_id: int):
             on p.opta_code = ps.opta_code and p.features_gameweek_id = ps.fetched_gameweek_id
         join public.teams t
             on t.team_id = ps.team_id
-        where p.features_gameweek_id = {predicted_gameweek_id}
+        where p.features_gameweek_id = {current_gameweek_id}
     """
 
     df = pd.read_sql(query, engine)
