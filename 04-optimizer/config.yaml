@@ -1,0 +1,26 @@
+# Optimizer config
+# Version: 1.0.0
+
+constraints: 
+  - max_budget: 100
+  - max_players: 15
+  - starting_players: 11
+  - max_players_per_team: 3
+  - position_total_limit:
+      - GK: 2
+      - DEF: 5
+      - MID: 5
+      - FWD: 3
+  - position_starting_min:
+      - GK: 1
+      - DEF: 3
+      - MID: 3
+      - FWD: 2
+  - horizon_weights_base:
+      - 1: 1.0
+      - 2: 0.8
+      - 3: 0.6
+  - horizon_weights_one:
+      - 1: 1.0
+      - 2: 0
+      - 3: 0

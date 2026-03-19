@@ -6,4 +6,7 @@
 
 4. performance metrics to think about: Top-K Precision, NDCG, Weighted MAE, Spearman Rank Correlation. 
 
-5. add print statements to show progress as we go. 
+5. add print statements/logging to show progress as we go. 
+
+6. predictor just predicted SARR to be top7 points gainer next week. Hes crystal palace and they dont have a fixture. update to make sure blank gameweeks are predicted 0. and somehow implement a double gameweek. 
+f.e. if there is a missing fixture detail which would be there normally such as home etc. we can force points to 0
