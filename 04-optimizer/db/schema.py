@@ -17,7 +17,7 @@ optimizer_runs = Table(
     Column("run_at", TIMESTAMP(timezone=True), nullable=False),
     Column("gameweek_id", SmallInteger, nullable=False), #features gameweek. prediction is +1
     Column("season_id", SmallInteger, nullable=False),
-    Column("horizon", SmallInteger, nullable=False), #1/3
+    Column("horizon", SmallInteger, nullable=False),
     Column("chip", String(50)), #null/free_hit/wildcard/bench_boost/triple_captain
     Column("free_transfers", SmallInteger),
     Column("transfer_hits", SmallInteger),

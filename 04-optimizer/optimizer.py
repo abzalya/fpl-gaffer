@@ -29,10 +29,17 @@ hit_penalty = config.HIT_PENALTY
 
 #Game Week Weights
 gw_weights = config.GW_WEIGHTS
-gw_weights_single = [1.0, 0.0, 0.0, 0.0, 0.0] #if we want to optimize for a single game week, set the weight for that game week to 1 and the rest to 0
 
 # Small weight to push bench players towards cheaper options without overriding the main objective
 BENCH_COST_EPSILON = 0.001
+
+#old laoder
+import pandas as pd
+
+def load_data(path):
+    x = pd.read_csv(path)
+    y = x.to_dict(orient='records')
+    return y
 
 ##MAIN OPTIMIZATION CODE
 #Problem
@@ -167,3 +174,20 @@ with open(f"f{free_hit}w{wildcard}b{bench_boost}e{existing_team_test_var}-output
     writer = csv.DictWriter(f, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(result_team)
+
+
+
+#OUTPUT MUST BE
+    # squad JSONB:
+# {
+#   "player_id": 123,
+#   "name": "Salah",
+#   "club": "Liverpool",
+#   "position": "MID",
+#   "price": 13.0,
+#   "is_starter": true,
+#   "captain": false,
+#   "expected_pts": { "gw1": 8.2, "gw2": 6.1, "gw3": 5.5 }
+# }
+
+
