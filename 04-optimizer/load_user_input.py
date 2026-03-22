@@ -9,7 +9,7 @@ def _get_active_chip(user_input):
     return active_chips[0] if active_chips else None
 
 def _existing_squad(user_input):
-    existing_squad = user_input["existing_squad"]
+    existing_squad = user_input["existing_squad"] or []
     existing_opta_codes = {p["opta_code"] for p in existing_squad}
     locked_players = [p["opta_code"] for p in existing_squad if p.get("locked")]
     return existing_opta_codes, locked_players

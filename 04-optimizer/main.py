@@ -39,7 +39,7 @@ def apply_horizon_filter(horizon, chip, df: pd.DataFrame):
 
 #slice weights to match the horizons
 def slice_weights(df: pd.DataFrame):
-    num_horizons = df["horizon"].max()  # or df["horizon"].max()
+    num_horizons = df["horizon"].max()
     return [w for _, w in horizon_weights[:num_horizons]]
 #use: gw_weights = slice_weights(predictions)
 
@@ -58,31 +58,29 @@ predictions = load_predictions()
 predictions_filtered = apply_horizon_filter(user_horizon, user_chip, predictions)
 players = preprocess_data(predictions_filtered)
 
-
+#logging
 run_id = uuid.uuid4()
 run_at = datetime.now(timezone.utc)
 
 
-# TEMP: exclude players from these teams entirely
-TEMP_EXCLUDED_TEAMS = {"Arsenal", "Man City", "Wolves", "Crystal Palace"}
-players = [p for p in players if p.get("team", "") not in TEMP_EXCLUDED_TEAMS]
-
-# Chip flags (default: no chips, fresh squad selection)
-bench_boost = 0
-free_hit = 1
-wildcard = 0
-existing_team_test_var = 0
-
-# Locked players: derived from existing_squad entries where locked=true
-locked_players = []  # e.g. [p["player_id"] for p in existing_squad if p.get("locked")]
+# # TEMP: exclude players from these teams entirely
+# TEMP_EXCLUDED_TEAMS = {"Arsenal", "Man City", "Wolves", "Crystal Palace"}
+# players = [p for p in players if p.get("team", "") not in TEMP_EXCLUDED_TEAMS]
 
 # Weights THIS IS GOOD KEEP
-gw_weights = slice_weights(test)
+gw_weights = slice_weights(predictions_filtered)
 gw_weights_single = [1.0] # this is now legacy, delete once optimizer code refactored. 
 BENCH_COST_EPSILON = 0.01 # pushing bench players to have minimal cost. 
 
-# Budget / squad size aliases
+# Budget
 budget = max_budget
+if user_existing_opta_codes:
+    existing_players = [p for p in players if p["opta_code"] in user_existing_opta_codes]
+    budget = user_bank + sum(p["price"] for p in existing_players)
+
+print(budget)
+
+# Squad Size
 total_players = max_players
 starter_players = starting_players
 
@@ -101,29 +99,41 @@ problem = pulp.LpProblem("FPL_Optimizer", pulp.LpMaximize)
 selected = {player['opta_code']: pulp.LpVariable(f"selected_{player['opta_code']}", cat='Binary') for player in players}
 starters = {player['opta_code']: pulp.LpVariable(f"starter_{player['opta_code']}", cat='Binary') for player in players}
 
-#existing players needs adjustment
-existing_players = [p for p in players if p["opta_code"] in existing_opta_codes]
-
 #Objective: Maximize game week points.
 def select_squad():
-    if bench_boost == 1:
-        # All 15 players score — maximize all selected for single GW
-        problem += pulp.lpSum(
-            selected[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights_single[i] for i in range(len(gw_weights_single)))
-            for player in players
-        ), "Total_Points"
-    elif free_hit == 1:
-        # 11 starters score for single GW; bench 4 are cheap fillers
-        starter_pts = pulp.lpSum(
-            starters[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights_single[i] for i in range(len(gw_weights_single)))
-            for player in players
-        )
-        bench_cost = pulp.lpSum(
-            (selected[player['opta_code']] - starters[player['opta_code']]) * player['price'] for player in players
-        )
-        problem += starter_pts - BENCH_COST_EPSILON * bench_cost, "Total_Points"
-    elif wildcard == 1 or existing_team_test_var == 0:
-        # 11 starters optimized over 5 GWs; bench 4 are cheap fillers
+    global problem
+    if user_chip:
+        match user_chip:
+            case "free_hit": #optimize 1 week forced up top technically is it needed ?
+                starter_pts = pulp.lpSum(
+                    starters[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
+                    for player in players
+                )
+                bench_cost = pulp.lpSum(
+                    (selected[player['opta_code']] - starters[player['opta_code']]) * player['price'] for player in players
+                )
+                problem += starter_pts - BENCH_COST_EPSILON * bench_cost, "Total_Points"
+            case "bench_boost": #optimize 15 players points, not pushing bench down to cheap. is the logic here sound ?
+                problem += pulp.lpSum(
+                    selected[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
+                    for player in players
+                ), "Total_Points"
+            case "wildcard": #essentially new team creation
+                starter_pts = pulp.lpSum(
+                    starters[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
+                    for player in players
+                )
+                bench_cost = pulp.lpSum(
+                    (selected[player['opta_code']] - starters[player['opta_code']]) * player['price'] for player in players
+                )
+                problem += starter_pts - BENCH_COST_EPSILON * bench_cost, "Total_Points"
+            case "triple_captain": #nothing here tbf 
+                print("user_chip is free hit")
+    
+    
+    #Todo: Existing team logic. Captaincy logic but i can add that at the bottom outside optimizer.
+    #wildcard/new team placeholder as default (only set if no chip objective was set above)
+    if not user_chip or user_chip == "triple_captain":
         starter_pts = pulp.lpSum(
             starters[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
             for player in players
@@ -132,16 +142,7 @@ def select_squad():
             (selected[player['opta_code']] - starters[player['opta_code']]) * player['price'] for player in players
         )
         problem += starter_pts - BENCH_COST_EPSILON * bench_cost, "Total_Points"
-    else:
-        # Existing team: same as wildcard for now (hit penalty TODO)
-        starter_pts = pulp.lpSum(
-            starters[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
-            for player in players
-        )
-        bench_cost = pulp.lpSum(
-            (selected[player['opta_code']] - starters[player['opta_code']]) * player['price'] for player in players
-        )
-        problem += starter_pts - BENCH_COST_EPSILON * bench_cost, "Total_Points"
+
 
     #Constraints
     #Budget constraint
@@ -150,7 +151,7 @@ def select_squad():
     #Players constraints
     problem += pulp.lpSum(selected[player['opta_code']] for player in players) == total_players, "Total_Players_Constraint"
 
-    if bench_boost == 1:
+    if user_chip == "bench_boost":
         # All 15 play — starters == selected
         for player in players:
             problem += starters[player['opta_code']] == selected[player['opta_code']], f"BenchBoost_AllPlay_{player['opta_code']}"
@@ -174,9 +175,9 @@ def select_squad():
         problem += pulp.lpSum(starters[player['opta_code']] for player in players if player['position'] == position) >= min_players_per_position[set_positions.index(position)], f"Min_{position}_Starter_Constraint"
 
     # Locked players must be selected
-    for pid in locked_players:
-        if pid in selected:
-            problem += selected[pid] == 1, f"Locked_{pid}"
+    for opta_code in user_locked_players:
+        if opta_code in selected:
+            problem += selected[opta_code] == 1, f"Locked_{opta_code}"
 
     #Solve the problem
     problem.solve()
@@ -185,7 +186,7 @@ def select_squad():
     return optimized_team
 
 #Output results
-optimized_team = [player for player in players if pulp.value(selected[player['opta_code']]) == 1]
+optimized_team = select_squad()
 print(optimized_team)
 total_price = sum(player['price'] for player in optimized_team)
 
@@ -250,7 +251,7 @@ def package_squad(result_team, gw_weights):
 ##temporary export
 import json
 squad_json = package_squad(result_team, gw_weights)
-output_path = f"f{free_hit}w{wildcard}b{bench_boost}e{existing_team_test_var}-output_.json"
+output_path = f"chip-{user_chip or 'none'}-existing-{bool(user_existing_opta_codes)}-output_.json"
 with open(output_path, "w") as f:
     json.dump(squad_json, f, indent=2)
 print(f"Squad written to {output_path}")
