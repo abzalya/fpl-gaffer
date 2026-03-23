@@ -58,7 +58,7 @@ optimizer_run_logs = Table(
     Column("input_params", JSONB, nullable=False),
     Column("config_snapshot", JSONB),
     Column("error_message", Text),
-    CheckConstraint("status IN ('optimal','error','infeasible')", name="ck_optimizer_run_logs_status"),
+    CheckConstraint("status IN ('optimal','error','infeasible','unbounded')", name="ck_optimizer_run_logs_status"),
 )
 Index("ix_optimizer_run_logs_run_id", optimizer_run_logs.c.run_id)
 Index("ix_optimizer_run_logs_run_at", optimizer_run_logs.c.run_at)
