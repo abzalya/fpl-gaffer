@@ -1,6 +1,5 @@
 # FPL Gaffer — optimizer Entry Point
 # Version: 1.0.0
-import csv
 import pulp
 import uuid
 import yaml
@@ -19,11 +18,6 @@ def load_config():
 
 config = load_config()
 max_budget = config["constraints"]["max_budget"]
-max_players = config["constraints"]["max_players"]
-starting_players = config["constraints"]["starting_players"]
-max_players_per_team = config["constraints"]["max_players_per_team"]
-position_total_limit = list(config["constraints"]["position_total_limit"].items())
-position_starting_min = list(config["constraints"]["position_starting_min"].items())
 horizon_weights = list(config["constraints"]["horizon_weights"].items())
 
 #USER INPUT LOADING
@@ -62,15 +56,8 @@ players = preprocess_data(predictions_filtered)
 run_id = uuid.uuid4()
 run_at = datetime.now(timezone.utc)
 
-
-# # TEMP: exclude players from these teams entirely
-# TEMP_EXCLUDED_TEAMS = {"Arsenal", "Man City", "Wolves", "Crystal Palace"}
-# players = [p for p in players if p.get("team", "") not in TEMP_EXCLUDED_TEAMS]
-
 # Weights THIS IS GOOD KEEP
 gw_weights = slice_weights(predictions_filtered)
-gw_weights_single = [1.0] # this is now legacy, delete once optimizer code refactored. 
-BENCH_COST_EPSILON = 0.01 # pushing bench players to have minimal cost. 
 
 # Budget
 budget = max_budget
@@ -78,155 +65,161 @@ if user_existing_opta_codes:
     existing_players = [p for p in players if p["opta_code"] in user_existing_opta_codes]
     budget = user_bank + sum(p["price"] for p in existing_players)
 
-print(budget)
-
-# Squad Size
-total_players = max_players
-starter_players = starting_players
-
-# Position order and limits (derived from config)
-set_positions = [pos for pos, _ in position_total_limit]
-max_players_per_position = [lim for _, lim in position_total_limit]
-min_players_per_position = [lim for _, lim in position_starting_min]
-
-#test on old code
-##MAIN OPTIMIZATION CODE
-#Problem
-problem = pulp.LpProblem("FPL_Optimizer", pulp.LpMaximize)
-
-#Decision Variables
-#Selected players (binary)
-selected = {player['opta_code']: pulp.LpVariable(f"selected_{player['opta_code']}", cat='Binary') for player in players}
-starters = {player['opta_code']: pulp.LpVariable(f"starter_{player['opta_code']}", cat='Binary') for player in players}
-
 #Objective: Maximize game week points.
-def select_squad():
-    global problem
-    if user_chip:
-        match user_chip:
-            case "free_hit": #optimize 1 week forced up top technically is it needed ?
-                starter_pts = pulp.lpSum(
-                    starters[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
-                    for player in players
-                )
-                bench_cost = pulp.lpSum(
-                    (selected[player['opta_code']] - starters[player['opta_code']]) * player['price'] for player in players
-                )
-                problem += starter_pts - BENCH_COST_EPSILON * bench_cost, "Total_Points"
-            case "bench_boost": #optimize 15 players points, not pushing bench down to cheap. is the logic here sound ?
-                problem += pulp.lpSum(
-                    selected[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
-                    for player in players
-                ), "Total_Points"
-            case "wildcard": #essentially new team creation
-                starter_pts = pulp.lpSum(
-                    starters[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
-                    for player in players
-                )
-                bench_cost = pulp.lpSum(
-                    (selected[player['opta_code']] - starters[player['opta_code']]) * player['price'] for player in players
-                )
-                problem += starter_pts - BENCH_COST_EPSILON * bench_cost, "Total_Points"
-            case "triple_captain": #nothing here tbf 
-                print("user_chip is free hit")
-    
-    
-    #Todo: Existing team logic. Captaincy logic but i can add that at the bottom outside optimizer.
-    #wildcard/new team placeholder as default (only set if no chip objective was set above)
-    if not user_chip or user_chip == "triple_captain":
+##MAIN OPTIMIZATION CODE
+def select_squad(players, gw_weights, budget, user_chip, user_locked_players, user_existing_opta_codes, user_free_transfers, config_constraints):
+    total_players = config_constraints["max_players"]
+    starter_players = config_constraints["starting_players"]
+    max_players_per_team = config_constraints["max_players_per_team"]
+    position_total_limit = list(config_constraints["position_total_limit"].items())
+    position_starting_min = list(config_constraints["position_starting_min"].items())
+    set_positions = [pos for pos, _ in position_total_limit]
+    max_players_per_position = [lim for _, lim in position_total_limit]
+    min_players_per_position = [lim for _, lim in position_starting_min]
+    BENCH_COST_EPSILON = config_constraints["bench_cost_modifier"]
+
+    #PROBLEM
+    problem = pulp.LpProblem("FPL_Optimizer", pulp.LpMaximize)
+
+    #Decision Variables for pulp
+    selected = {p['opta_code']: pulp.LpVariable(f"selected_{p['opta_code']}", cat='Binary') for p in players}
+    starters = {p['opta_code']: pulp.LpVariable(f"starter_{p['opta_code']}", cat='Binary') for p in players}
+
+    #OBJECTIVE
+    #Horizon filtering already achieves the idea to tell the optimizer for how many horizons to think.
+    #bench_boost is the only chip that changes the objective structure (all 15 score). 
+    #everything else uses the same objective. maximize starters, minimize bench cost. 
+    if user_chip == "bench_boost":
+        problem += pulp.lpSum(
+            selected[p['opta_code']] * pulp.lpSum(p[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
+            for p in players
+        ), "Total_Points"
+    else:
         starter_pts = pulp.lpSum(
-            starters[player['opta_code']] * pulp.lpSum(player[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
-            for player in players
-        )
+            starters[p['opta_code']] * pulp.lpSum(p[f'h{i+1}'] * gw_weights[i] for i in range(len(gw_weights)))
+            for p in players)
         bench_cost = pulp.lpSum(
-            (selected[player['opta_code']] - starters[player['opta_code']]) * player['price'] for player in players
-        )
-        problem += starter_pts - BENCH_COST_EPSILON * bench_cost, "Total_Points"
+            (selected[p['opta_code']] - starters[p['opta_code']]) * p['price'] for p in players)
+        #hit penalty
+        #wildcard and free_hit chips are exempt
+        transfer_penalty = 0
+        if user_existing_opta_codes and user_chip not in ("wildcard", "free_hit"):
+            existing_set = set(user_existing_opta_codes)
+            extra_transfers = pulp.LpVariable("extra_transfers", lowBound=0, cat='Continuous')
+            transfers_made = pulp.lpSum(
+                selected[p['opta_code']] for p in players if p['opta_code'] not in existing_set
+            )
+            problem += extra_transfers >= transfers_made - user_free_transfers, "Extra_Transfers_Lower_Bound"
+            transfer_penalty = 4 * extra_transfers
+        problem += starter_pts - BENCH_COST_EPSILON * bench_cost - transfer_penalty, "Total_Points"
 
-
-    #Constraints
+    #CONSTRAINTS
     #Budget constraint
-    problem += pulp.lpSum(selected[player['opta_code']] * player['price'] for player in players) <= budget, "Budget_Constraint"
+    problem += pulp.lpSum(selected[p['opta_code']] * p['price'] for p in players) <= budget, "Budget_Constraint"
 
     #Players constraints
-    problem += pulp.lpSum(selected[player['opta_code']] for player in players) == total_players, "Total_Players_Constraint"
+    problem += pulp.lpSum(selected[p['opta_code']] for p in players) == total_players, "Total_Players_Constraint"
 
-    if user_chip == "bench_boost":
-        # All 15 play — starters == selected
-        for player in players:
-            problem += starters[player['opta_code']] == selected[player['opta_code']], f"BenchBoost_AllPlay_{player['opta_code']}"
+    if user_chip == "bench_boost": #TODO: at the moment as it is now, it thinks all players play for the whatever horizon is set. can i make it think about that only for h1 ? will that even matter ?
+        #i might have at least a small idea, we can designate starters to an optimum team only for h2, h3 within bench boost team. so maximize starter points within a team. that way the lowest with expected points in h2 and h3 are benched. 
+        #THIS COULD WORK TRY LATER
+        #all 15 starters
+        for p in players:
+            problem += starters[p['opta_code']] == selected[p['opta_code']], f"BenchBoost_AllPlay_{p['opta_code']}"
     else:
-        # Exactly 11 starters, and each starter must be one of the selected 15
-        problem += pulp.lpSum(starters[player['opta_code']] for player in players) == starter_players, "Starter_Players_Constraint"
-        for player in players:
-            problem += starters[player['opta_code']] <= selected[player['opta_code']], f"Starter_In_Selected_{player['opta_code']}"
+        #11 starters, and each starter must be one of the selected 15
+        problem += pulp.lpSum(starters[p['opta_code']] for p in players) == starter_players, "Starter_Players_Constraint"
+        for p in players:
+            problem += starters[p['opta_code']] <= selected[p['opta_code']], f"Starter_In_Selected_{p['opta_code']}"
 
     #Max players per team
-    teams = set(player['team'] for player in players)
+    teams = set(p['team'] for p in players)
     for team in teams:
-        problem += pulp.lpSum(selected[player['opta_code']] for player in players if player['team'] == team) <= max_players_per_team, f"Max_Players_{team}"
+        problem += pulp.lpSum(selected[p['opta_code']] for p in players if p['team'] == team) <= max_players_per_team, f"Max_Players_{team}"
 
     #Position constraints
-    positions = set(player['position'] for player in players)
+    positions = set(p['position'] for p in players)
     for position in positions:
-        problem += pulp.lpSum(selected[player['opta_code']] for player in players if player['position'] == position) >= min_players_per_position[set_positions.index(position)], f"Min_{position}_Selected_Constraint"
-        problem += pulp.lpSum(selected[player['opta_code']] for player in players if player['position'] == position) <= max_players_per_position[set_positions.index(position)], f"Max_{position}_Selected_Constraint"
+        idx = set_positions.index(position)
+        problem += pulp.lpSum(selected[p['opta_code']] for p in players if p['position'] == position) >= min_players_per_position[idx], f"Min_{position}_Selected_Constraint"
+        problem += pulp.lpSum(selected[p['opta_code']] for p in players if p['position'] == position) <= max_players_per_position[idx], f"Max_{position}_Selected_Constraint"
         # Starters must also satisfy minimum position counts
-        problem += pulp.lpSum(starters[player['opta_code']] for player in players if player['position'] == position) >= min_players_per_position[set_positions.index(position)], f"Min_{position}_Starter_Constraint"
+        problem += pulp.lpSum(starters[p['opta_code']] for p in players if p['position'] == position) >= min_players_per_position[idx], f"Min_{position}_Starter_Constraint"
 
-    # Locked players must be selected
+    #Existing team constraints
+    #Locked players must be selected
     for opta_code in user_locked_players:
         if opta_code in selected:
             problem += selected[opta_code] == 1, f"Locked_{opta_code}"
+    # When the user has an existing team and is not on wildcard or free_hit,
+    # the transfer penalty discourages unnecessary changes.
+    # No hard constraint, penalty should work
 
     #Solve the problem
     problem.solve()
 
-    optimized_team = [player for player in players if pulp.value(selected[player['opta_code']]) == 1]
-    return optimized_team
+    #preparing squad
+    squad = [p for p in players if pulp.value(selected[p['opta_code']]) == 1]
 
-#Output results
-optimized_team = select_squad()
-print(optimized_team)
-total_price = sum(player['price'] for player in optimized_team)
+    #appending is_starter key to the players. 
+    for p in squad:
+        p["starter"] = bool(starters[p["opta_code"]].value())
+    
 
-#print(f"Optimized Team: {optimized_team}")
-#print(f"Total Price: {total_price}")
+    #captain logic #no need to recalculate points here right ?
+    #triple captain only makes captain points x3. captain still stays the same. no additional logic
+    for p in squad:
+        p["captain"] = False
+    
+    def captain_score(p):
+        return sum(p[f"h{i+1}"] * gw_weights[i] for i in range(len(gw_weights)) if f"h{i+1}" in p)
 
-for player in optimized_team:
-    print("Name:", player["web_name"])
-    print("Club:", player["team"])
-    print("Position:", player["position"])
-    print("-------------------")
+    captain = max((p for p in squad if p["starter"]), key=captain_score)
+    captain["captain"] = True
 
-grand_total = 0
-for player in optimized_team:
-    total_points = sum(player[f"h{i+1}"] for i in range(len(gw_weights)))
-    grand_total += total_points
+    #squad printing DELETE LATER:
+    total_price = sum(player["price"] for player in squad)
 
-print("Grand Total Points:", grand_total)
+    for player in squad:
+        print("Name:", player["web_name"])
+        print("Club:", player["team"])
+        print("Position:", player["position"])
+        print("-------------------")
 
-#TODO: Add an existing team constraint. look at the existing team and optimize based on that. Limit transfers to 5? add a hit penalty for transfers over free transfers.
-#TODO: Add captain and triple captain.
-#i dont need the captain logic to be in the optimizer i can have it outside and simply captain one with the most points per gameweek predicted. 
+    grand_total = 0
+    for player in squad:
+        total_points = sum(player[f"h{i+1}"] for i in range(len(gw_weights)))
+        grand_total += total_points
 
+    print("Total Points:", grand_total)
+    print("Price", total_price )
 
-#export
-result_team = []
-for p in optimized_team:
-    player_row = p.copy()
-    player_row["starter"] = bool(starters[p["opta_code"]].value())
-    result_team.append(player_row)
+    #preparing transfers out, in
+    selected_codes = {p["opta_code"] for p in squad}
+    transfers_in = [p for p in squad if p["opta_code"] not in user_existing_opta_codes]
+    transfers_out_codes = [code for code in user_existing_opta_codes if code not in selected_codes]      
+    transfers_out = [p for p in players if p["opta_code"] in transfers_out_codes]
+
+    #packaging output
+    squad_json = package_squad(squad, gw_weights)
+    if user_existing_opta_codes: #no need for transfers if no existing team.
+        transfers_in_json = package_transfers(transfers_in)
+        transfers_out_json = package_transfers(transfers_out)
+    else:
+        transfers_in_json = None
+        transfers_out_json = None
+
+    return squad_json, transfers_in_json, transfers_out_json
 
 #Output response shape: list of dictionaries
 #[{'opta_code': 21205, 'h1': 0.0557, 'predicted_gameweek_id': 31, 'season_id': 25, 'web_name': 'Heaton', 'first_name': 'Tom', 'second_name': 'Heaton', 'team': 'Man Utd', 'position': 'GKP', 'price': 3.8},...]
 #Package the squad into a json
-def package_squad(result_team, gw_weights):
+def package_squad(squad, gw_weights):
 
-    base_gw = result_team[0]["predicted_gameweek_id"]
+    base_gw = squad[0]["predicted_gameweek_id"]
     num_horizons = len(gw_weights)
 
-    squad_jsonb = {
+    squad_json = {
         "squad": [
             {
                 "opta_code": p["opta_code"],
@@ -235,22 +228,47 @@ def package_squad(result_team, gw_weights):
                 "position": p["position"],
                 "price": p["price"],
                 "is_starter": p["starter"],
-                "captain": False,  # TODO
+                "captain": p["captain"],
                 "expected_pts": [
                     {"gw": base_gw + i, "pts": round(p[f"h{i+1}"], 2)}
                     for i in range(num_horizons)
                     if f"h{i+1}" in p
                 ],
             }
-            for p in result_team
+            for p in squad
         ],
     }
 
-    return squad_jsonb
+    return squad_json
+
+def package_transfers(transfers):
+    transfers_json = {
+        "transfers": [
+            {
+                "opta_code": p["opta_code"],
+                "name": p["web_name"],
+                "club": p["team"],
+                "position": p["position"],
+                "price": p["price"],
+            }
+            for p in transfers
+        ],
+    }
+
+    return transfers_json
 
 ##temporary export
 import json
-squad_json = package_squad(result_team, gw_weights)
+squad_json, transfers_in_json, transfers_out_json = select_squad(
+    players,
+    gw_weights,
+    budget,
+    user_chip,
+    user_locked_players,
+    user_existing_opta_codes,
+    user_free_transfers,
+    config["constraints"],
+)
 output_path = f"chip-{user_chip or 'none'}-existing-{bool(user_existing_opta_codes)}-output_.json"
 with open(output_path, "w") as f:
     json.dump(squad_json, f, indent=2)
