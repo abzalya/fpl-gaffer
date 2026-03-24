@@ -17,8 +17,8 @@ training:
   # 1 = predict GW+1 points, 2 = GW+2, 3 = GW+3
   horizons:
     - 1
-    #- 2
-    #- 3
+    - 2
+    - 3
 
   walk_forward:
     min_train_steps: 10

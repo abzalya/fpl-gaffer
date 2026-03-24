@@ -91,8 +91,18 @@ def select_squad(players, gw_weights, budget, user_chip, user_locked_players, us
     # the transfer penalty discourages unnecessary changes.
     # No hard constraint, penalty should work
 
-    #Solve the problem
-    problem.solve()
+    #Solve the problem & logging
+    try:
+        problem.solve()
+        status = pulp.LpStatus[problem.status].lower()
+        error_message = None
+    except Exception as e:
+        status = "error"
+        error_message = str(e)
+        return None, None, None, None, status, error_message
+
+    if status != "optimal":
+        return None, None, None, None, status, error_message
 
     #preparing squad
     squad = [p for p in players if pulp.value(selected[p['opta_code']]) == 1]
@@ -118,7 +128,7 @@ def select_squad(players, gw_weights, budget, user_chip, user_locked_players, us
     transfers_out_codes = [code for code in user_existing_opta_codes if code not in selected_codes]
     transfers_out = [p for p in players if p["opta_code"] in transfers_out_codes]
 
-    transfer_hits = (max(0, len(transfers_in) - user_free_transfers))
+    transfer_hits = max(0, len(transfers_in) - user_free_transfers) if user_existing_opta_codes else 0
 
     #packaging output
     squad_json = package_squad(squad, gw_weights)
@@ -129,7 +139,7 @@ def select_squad(players, gw_weights, budget, user_chip, user_locked_players, us
         transfers_in_json = None
         transfers_out_json = None
 
-    return squad_json, transfers_in_json, transfers_out_json, transfer_hits
+    return squad_json, transfers_in_json, transfers_out_json, transfer_hits, status, error_message
 
 
 #Output response shape: list of dictionaries

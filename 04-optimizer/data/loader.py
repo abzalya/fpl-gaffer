@@ -13,7 +13,7 @@ def load_predictions(current_gameweek_id: int | None = None):
 
     query = f"""
         select p.opta_code, p.predicted_points, p.predicted_gameweek_id, p.season_id, p.horizon,  ps.web_name, ps.first_name, ps.second_name, t.name as team,
-            case 
+            case
             when ps.element_type = 1 then 'GKP'
             when ps.element_type = 2 then 'DEF'
             when ps.element_type = 3 then 'MID'
@@ -21,7 +21,7 @@ def load_predictions(current_gameweek_id: int | None = None):
             end as position,
             round(ps.now_cost / 10.0, 1) as price
         from ml.predictions p
-        join archive.player_snapshots ps 
+        join archive.player_snapshots ps
             on p.opta_code = ps.opta_code and p.features_gameweek_id = ps.fetched_gameweek_id
         join public.teams t
             on t.team_id = ps.team_id

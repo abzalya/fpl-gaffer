@@ -48,7 +48,7 @@ def _load_production_artefact(horizon: int):
     return dict(row)
 
 
-def predict_horizon(horizon: int, features_df: pd.DataFrame):
+def predict_horizon(horizon: int, features_df: pd.DataFrame, current_gw: int):  # NEW: current_gw added
 
     artefact = _load_production_artefact(horizon)
     model = joblib.load(artefact["artefact_path"])
@@ -72,6 +72,7 @@ def predict_horizon(horizon: int, features_df: pd.DataFrame):
         horizon=horizon,
         features_df=features_df,
         predicted_points=predicted_points,
+        current_gw=current_gw,  # NEW: passed through from load_latest_features
     )
     print(f"  Horizon h{horizon}: Predicted points for {n} rows.")
 
@@ -99,10 +100,13 @@ def main():
             raise RuntimeError("No production models found. Run main.py to train first.")
 
     # Load features once — shared across all horizons
-    features_df = load_latest_features()
+    # OLD: features_df = load_latest_features()
+    # NEW: also returns current_gw (global max GW) for consistent prediction tagging
+    features_df, current_gw = load_latest_features()
 
     for horizon in horizons:
-        predict_horizon(horizon, features_df)
+        # OLD: predict_horizon(horizon, features_df)
+        predict_horizon(horizon, features_df, current_gw)  # NEW: current_gw threaded through
 
     print("  Predictions written to ml.predictions.")
 

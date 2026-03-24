@@ -100,6 +100,7 @@ def save_predictions(
     horizon: int,
     features_df: pd.DataFrame,
     predicted_points: list[float],
+    current_gw: int,  # NEW: global current GW passed explicitly
 ):
 
     rows = [
@@ -108,8 +109,13 @@ def save_predictions(
             "predicted_at": predicted_at,
             "opta_code": int(row["opta_code"]),
             "season_id": int(row["season_id"]),
-            "features_gameweek_id": int(row["gameweek_id"]),
-            "predicted_gameweek_id": int(row["gameweek_id"]) + horizon,
+            # OLD: used row["gameweek_id"] — blank-GW players were tagged with GW-1,
+            # making the optimizer's MAX(features_gameweek_id) filter exclude them.
+            # "features_gameweek_id": int(row["gameweek_id"]),
+            # "predicted_gameweek_id": int(row["gameweek_id"]) + horizon,
+            # NEW: always tag with the global current GW so all players are consistent.
+            "features_gameweek_id": current_gw,
+            "predicted_gameweek_id": current_gw + horizon,
             "horizon": horizon,
             "predicted_points": round(float(pts), 4),
             "actual_points": None,

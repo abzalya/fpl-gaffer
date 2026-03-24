@@ -1,6 +1,7 @@
 # FPL Gaffer — optimizer Entry Point
 # Version: 1.0.0
 import json
+import time
 import yaml
 from pathlib import Path
 from data.loader import load_predictions
@@ -8,6 +9,7 @@ from data.preprocessor import apply_horizon_filter, preprocess_data, slice_weigh
 from tests.temporary_input import adjust_user_input
 from load_user_input import load_user_input
 from optimizer import select_squad
+from registry.logger import save_log
 
 #loading config
 CONFIG_PATH = Path(__file__).parent / "config.yaml"
@@ -21,6 +23,8 @@ max_budget = config["constraints"]["max_budget"]
 horizon_weights = list(config["constraints"]["horizon_weights"].items())
 
 if __name__ == "__main__":
+    triggered_by = "manual"
+
     #USER INPUT LOADING
     #FAKE json response that can be adjusted for testing purposes (my personal team)
     user_input = adjust_user_input(1)
@@ -41,7 +45,8 @@ if __name__ == "__main__":
         existing_players = [p for p in players if p["opta_code"] in user_existing_opta_codes]
         budget = user_bank + sum(p["price"] for p in existing_players)
 
-    squad_json, transfers_in_json, transfers_out_json, transfer_hits = select_squad(
+    t0 = time.monotonic()
+    squad_json, transfers_in_json, transfers_out_json, transfer_hits, status, error_message = select_squad(
         players,
         gw_weights,
         budget,
@@ -51,7 +56,24 @@ if __name__ == "__main__":
         user_free_transfers,
         config["constraints"],
     )
-    
+    solve_time_ms = int((time.monotonic() - t0) * 1000)
+
+    #logging
+
+    save_log(
+        status=status,
+        solve_time_ms=solve_time_ms,
+        input_params=user_input,
+        error_message=error_message,
+        #run fields
+        db_input=predictions_filtered,
+        transfer_hits=transfer_hits,
+        squad_json=squad_json,
+        transfers_in_json=transfers_in_json,
+        transfers_out_json=transfers_out_json,
+        triggered_by=triggered_by,
+        user_chip=user_chip)
+
     ##temporary export
     output_path = f"chip-{user_chip or 'none'}-existing-{bool(user_existing_opta_codes)}-output_.json"
     with open(output_path, "w") as f:
@@ -69,4 +91,12 @@ if __name__ == "__main__":
     print(f"Transfers out written to {transfers_out_path}")
 
 
-#TODO: add triggered by implementation and logging
+#TODO:
+#pipeline needs to be tagged for wildcard, free_hit, bench_boost and all three horizons. USER TEAM MUST BE EMPTY
+#wait my idea for having cached results doesnt work? since user team dictates budget. then pipeline only works for new teams?
+
+
+## logging notes:
+#horizon has to be determined by the what is available not user ?
+#budget calculation is wrong
+#expected points not doing captain and triple captain for 1 week. annoying to do
