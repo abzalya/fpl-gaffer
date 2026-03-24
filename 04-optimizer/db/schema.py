@@ -53,7 +53,7 @@ optimizer_run_logs = Table(
     Column("id", BigInteger, primary_key=True, autoincrement=True),
     Column("run_id", UUID(as_uuid=True)),           
     Column("run_at", TIMESTAMP(timezone=True), nullable=False),
-    Column("status", String(50), nullable=False), #optimal/error/infeasible
+    Column("status", String(50), nullable=False), #optimal/error/infeasible/unbounded
     Column("solve_time_ms", BigInteger, nullable=False),
     Column("input_params", JSONB, nullable=False),
     Column("config_snapshot", JSONB),

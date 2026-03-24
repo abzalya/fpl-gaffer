@@ -41,7 +41,7 @@ if __name__ == "__main__":
         existing_players = [p for p in players if p["opta_code"] in user_existing_opta_codes]
         budget = user_bank + sum(p["price"] for p in existing_players)
 
-    squad_json, transfers_in_json, transfers_out_json = select_squad(
+    squad_json, transfers_in_json, transfers_out_json, transfer_hits = select_squad(
         players,
         gw_weights,
         budget,
@@ -67,3 +67,6 @@ if __name__ == "__main__":
     with open(transfers_out_path, "w") as f:
         json.dump(transfers_out_json, f, indent=2)
     print(f"Transfers out written to {transfers_out_path}")
+
+
+#TODO: add triggered by implementation and logging

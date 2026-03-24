@@ -118,6 +118,8 @@ def select_squad(players, gw_weights, budget, user_chip, user_locked_players, us
     transfers_out_codes = [code for code in user_existing_opta_codes if code not in selected_codes]
     transfers_out = [p for p in players if p["opta_code"] in transfers_out_codes]
 
+    transfer_hits = (max(0, len(transfers_in) - user_free_transfers))
+
     #packaging output
     squad_json = package_squad(squad, gw_weights)
     if user_existing_opta_codes: #no need for transfers if no existing team.
@@ -127,7 +129,7 @@ def select_squad(players, gw_weights, budget, user_chip, user_locked_players, us
         transfers_in_json = None
         transfers_out_json = None
 
-    return squad_json, transfers_in_json, transfers_out_json
+    return squad_json, transfers_in_json, transfers_out_json, transfer_hits
 
 
 #Output response shape: list of dictionaries
