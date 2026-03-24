@@ -29,6 +29,8 @@ def save_log(
     transfers_out_json: dict | None = None,
     triggered_by: str | None = None,
     user_chip: str | None = None,
+    effective_horizon: int | None = None,
+    budget: float | None = None,
 ):
     run_id = uuid.uuid4()
     run_at = datetime.now(timezone.utc)
@@ -55,7 +57,7 @@ def save_log(
         conn.execute(stmt)
     
     if status == "optimal":
-        _save_run(run_id, run_at, db_input, input_params, transfer_hits, squad_json, transfers_in_json, transfers_out_json, triggered_by, user_chip)
+        _save_run(run_id, run_at, db_input, input_params, transfer_hits, squad_json, transfers_in_json, transfers_out_json, triggered_by, user_chip, effective_horizon, budget)
 
 def _save_run(
     run_id: uuid.UUID,
@@ -68,7 +70,8 @@ def _save_run(
     transfers_out_json: dict | None,
     triggered_by: str,
     user_chip: str | None,
-
+    effective_horizon: int | None,
+    budget: float | None,
 ):
     #expected points and budget used calc
     squad = squad_json["squad"]
@@ -81,20 +84,25 @@ def _save_run(
 
     budget_used = sum(p["price"] for p in squad)
 
+    #free_hit and wilcard allow infinite transfers. i.e transfer_hits = 0
+    if user_chip in ("free_hit", "wildcard"):
+        transfer_hits = 0
+
+
     row = [
         {
             "run_id": run_id,
             "run_at": run_at,
-            "gameweek_id": int(db_input["predicted_gameweek_id"].iloc[0] - 1),
+            "gameweek_id": int(db_input["predicted_gameweek_id"].min() - 1),
             "season_id": int(db_input["season_id"].iloc[0]),
-            "horizon": input_params["horizon"],
+            "horizon": effective_horizon,
             "chip": user_chip,
             "free_transfers": input_params["free_transfers"],
             "transfer_hits": transfer_hits,
             "expected_pts": expected_pts,
             "expected_pts_after_hits": expected_pts - (transfer_hits * 4),
             "budget_used": budget_used,
-            "budget_remaining": input_params["bank"] - budget_used,
+            "budget_remaining": budget - budget_used,
             "squad": squad_json,
             "transfers_in": transfers_in_json,
             "transfers_out": transfers_out_json,

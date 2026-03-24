@@ -17,6 +17,6 @@ def preprocess_data(df: pd.DataFrame):
     pts = df.pivot(index="opta_code", columns="horizon", values="predicted_points")
     pts.columns = [f'h{h}' for h in pts.columns]  # rename 1→h1 etc.
     pts = pts.reset_index()
-    meta = df[['opta_code',"predicted_gameweek_id", "season_id", "web_name", "first_name", "second_name", "team", 'position', 'price']].drop_duplicates('opta_code')
+    meta = df.sort_values('horizon')[['opta_code',"predicted_gameweek_id", "season_id", "web_name", "first_name", "second_name", "team", 'position', 'price']].drop_duplicates('opta_code')
     processed_df = pts.merge(meta, on='opta_code')
     return processed_df.to_dict(orient='records')

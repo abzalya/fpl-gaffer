@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     #USER INPUT LOADING
     #FAKE json response that can be adjusted for testing purposes (my personal team)
-    user_input = adjust_user_input(1)
+    user_input = adjust_user_input(2)
 
     user_existing_opta_codes, user_locked_players, user_chip, user_bank, user_free_transfers, user_horizon = load_user_input(user_input)
 
@@ -72,7 +72,9 @@ if __name__ == "__main__":
         transfers_in_json=transfers_in_json,
         transfers_out_json=transfers_out_json,
         triggered_by=triggered_by,
-        user_chip=user_chip)
+        user_chip=user_chip,
+        effective_horizon=int(predictions_filtered["horizon"].max()),
+        budget=budget)
 
     ##temporary export
     output_path = f"chip-{user_chip or 'none'}-existing-{bool(user_existing_opta_codes)}-output_.json"
@@ -95,8 +97,5 @@ if __name__ == "__main__":
 #pipeline needs to be tagged for wildcard, free_hit, bench_boost and all three horizons. USER TEAM MUST BE EMPTY
 #wait my idea for having cached results doesnt work? since user team dictates budget. then pipeline only works for new teams?
 
-
 ## logging notes:
-#horizon has to be determined by the what is available not user ?
-#budget calculation is wrong
 #expected points not doing captain and triple captain for 1 week. annoying to do
