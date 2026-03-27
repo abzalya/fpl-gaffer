@@ -45,7 +45,8 @@ public_gameweeks = Table(
     Column("finished", Boolean, default=False),
     Column("is_current", Boolean, default=False),
     Column("is_next", Boolean, default=False),
-    Column("average_entry_score", SmallInteger),                   # Avg score across all FPL managers
+    Column("average_entry_score", SmallInteger),
+    Column("deadline_time", TIMESTAMP(timezone=True)),
 
     UniqueConstraint("gameweek_id", "season_id", name="uq_public_gameweeks_gw_season"),
 )
@@ -97,7 +98,8 @@ gameweeks = Table(
     Column("finished", Boolean, default=False),
     Column("is_current", Boolean, default=False),
     Column("is_next", Boolean, default=False),
-    Column("average_entry_score", SmallInteger),                   # Avg score across all FPL managers
+    Column("average_entry_score", SmallInteger),
+    Column("deadline_time", TIMESTAMP(timezone=True)),
     # Raw Data
     Column("raw_data", JSONB, nullable=False),
 

@@ -109,6 +109,7 @@ def clean_gameweeks(raw: dict, season_id: int) -> dict:
         "is_current":           _bool(raw.get("is_current")),
         "is_next":              _bool(raw.get("is_next")),
         "average_entry_score":  _int(raw.get("average_entry_score")),
+        "deadline_time": _dt(raw.get("deadline_time")),
         "raw_data":             raw,
     }
 

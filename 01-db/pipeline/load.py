@@ -25,7 +25,7 @@ def upsert_public_gameweeks(engine, gameweek_data: list[dict], season_id: int):
         print("No gameweek data to upsert.")
         return
     
-    PUBLIC_GW_COLS = {"gameweek_id", "season_id", "finished", "is_current", "is_next", "average_entry_score"}
+    PUBLIC_GW_COLS = {"gameweek_id", "season_id", "finished", "is_current", "is_next", "average_entry_score", "deadline_time"}
     
     cleaned = [
         {k: v for k, v in clean_gameweeks(row, season_id).items() if k in PUBLIC_GW_COLS}

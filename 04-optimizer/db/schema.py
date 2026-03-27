@@ -31,7 +31,7 @@ optimizer_runs = Table(
     Column("triggered_by", String(20), nullable=False), #pipeline/manual/experiment
     UniqueConstraint("run_id", name="uq_optimizer_runs_run_id"),
     CheckConstraint("chip IN ('free_hit','wildcard','bench_boost','triple_captain')", name="ck_optimizer_runs_chip"),
-    CheckConstraint("triggered_by IN ('pipeline','manual','experiment')", name="ck_optimizer_runs_triggered_by"),
+    CheckConstraint("triggered_by IN ('pipeline','manual','experiment','api')", name="ck_optimizer_runs_triggered_by"),
 )
 
 Index("ix_optimizer_runs_gameweek_id", optimizer_runs.c.gameweek_id)
