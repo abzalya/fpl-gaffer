@@ -1,11 +1,13 @@
 from fastapi import FastAPI
-from routers import gameweek, players
+from routers import gameweek, players, optimize
 
 app = FastAPI()
 
 app.include_router(gameweek.router)
 
 app.include_router(players.router)
+
+app.include_router(optimize.router)
 
 @app.get("/")
 def read_root():
