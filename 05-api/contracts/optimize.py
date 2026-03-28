@@ -42,11 +42,18 @@ class TransferResponse(BaseModel):
     position: str
     opta_code: int    
 
+# Wrappers mirror the nested shape returned by package_squad() and package_transfers() - REQUIRED
+class SquadWrapper(BaseModel):
+    squad: list[SquadResponse]
+
+class TransfersWrapper(BaseModel):
+    transfers: list[TransferResponse]
+
 class OptimizeResponse(BaseModel):
     status: str
     horizon: int
     solve_time_ms: int
     error_message: str | None
-    squad: list[SquadResponse]
-    transfers_in: list[TransferResponse] | None
-    transfers_out: list[TransferResponse] | None
+    squad: SquadWrapper
+    transfers_in: TransfersWrapper | None
+    transfers_out: TransfersWrapper | None
