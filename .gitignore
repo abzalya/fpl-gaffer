@@ -30,3 +30,6 @@ build/
 target/
 dbt_packages/
 logs/
+
+# Next.js (see 06-nextjs/.gitignore for full rules)
+06-nextjs/node_modules/

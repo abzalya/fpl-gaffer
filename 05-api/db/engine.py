@@ -2,10 +2,7 @@
 # Version 1.0.0
 
 from sqlalchemy import create_engine
-from dotenv import load_dotenv
-from pathlib import Path
-import os
+from config import DATABASE_URL
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
-engine = create_engine(os.getenv("database_url"),
+engine = create_engine(DATABASE_URL,
     pool_size=20, max_overflow=0, pool_pre_ping=True)
