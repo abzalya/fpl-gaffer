@@ -2,7 +2,6 @@
 #optimize route
 from pydantic import BaseModel
 from decimal import Decimal
-from typing import Optional
 
 class SquadRequest(BaseModel):
     opta_code: int
