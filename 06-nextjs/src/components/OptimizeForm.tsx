@@ -1,10 +1,19 @@
-// crating the post optimize component
+//POST /optimize form
+//pass players. return enriched squad. 
+//Version: 1.0.0
+
 "use client";
 
 import React, {useState} from "react";
-import {postOptimize} from "@/lib/api";
+import {PlayerResponse, postOptimize} from "@/lib/api";
+import {EnrichedPlayer, enrichSquad} from "@/lib/enrichment";
+import PlayerSearchInput from "@/components/PlayerSearchInput";
 
-export default function OptimizeForm() {
+type Props = {
+    players: PlayerResponse[];
+};
+
+export default function OptimizeForm({players}: Props) {
     const [horizon, setHorizon] = useState(3);
     const [bank, setBank] = useState(0);
     const [freeTransfers, setFreeTransfers] = useState(0);
@@ -16,12 +25,14 @@ export default function OptimizeForm() {
         Array(15).fill(null).map(() => ({ opta_code: null, locked: false }))
     );
     const [optimizeResult, setOptimizeResult] = useState<null | object>(null);
+    const [enrichedSquad, setEnrichedSquad] = useState<EnrichedPlayer[]>([]);
 
-    const setPlayerInSquad = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const setPlayerInSquad = (index: number, opta_code: number) => {
         const updatedSquad = [...existingSquad];
-        updatedSquad[index] = {...updatedSquad[index], opta_code: Number(e.target.value)};
+        updatedSquad[index] = {...updatedSquad[index], opta_code};
         setExistingSquad(updatedSquad);
     }
+ 
     const setLockPlayerInSquad = (index: number,  e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedSquad = [...existingSquad];
         updatedSquad[index] = {...updatedSquad[index], locked: e.target.checked};
@@ -38,6 +49,7 @@ export default function OptimizeForm() {
             horizon: horizon,
         });
         setOptimizeResult(response);
+        setEnrichedSquad(enrichSquad(response.squad.squad, players));
     }
 
     return (
@@ -52,47 +64,47 @@ export default function OptimizeForm() {
             <input type="checkbox" checked={benchBoost} onChange={(e) => setBenchBoost(e.target.checked)} /> Bench Boost
             <input type="checkbox" checked={tripleCaptain} onChange={(e) => setTripleCaptain(e.target.checked)} /> Triple Captain
         </div>
-        <div> existing squad 
+        <div> existing squad
             <div>
-                GK
-                <input type="text" placeholder="GK 1" value={existingSquad[0].opta_code ?? ""} onChange={(e) => setPlayerInSquad(0, e)}/>
+                GKPs
+                <PlayerSearchInput players={players} preSetPosition="GKP" onChange={(opta_code) => setPlayerInSquad(0, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[0].locked} onChange={(e) => setLockPlayerInSquad(0, e)} /> Locked
-                <input type="text" placeholder="GK 2" value={existingSquad[1].opta_code ?? ""} onChange={(e) => setPlayerInSquad(1, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="GKP" onChange={(opta_code) => setPlayerInSquad(1, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[1].locked} onChange={(e) => setLockPlayerInSquad(1, e)} /> Locked
             </div>
             <div>
-                DEF
-                <input type="text" placeholder="DEF 1" value={existingSquad[2].opta_code ?? ""} onChange={(e) => setPlayerInSquad(2, e)}/>
+                DEFs
+                <PlayerSearchInput players={players} preSetPosition="DEF" onChange={(opta_code) => setPlayerInSquad(2, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[2].locked} onChange={(e) => setLockPlayerInSquad(2, e)} /> Locked
-                <input type="text" placeholder="DEF 2" value={existingSquad[3].opta_code ?? ""} onChange={(e) => setPlayerInSquad(3, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="DEF" onChange={(opta_code) => setPlayerInSquad(3, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[3].locked} onChange={(e) => setLockPlayerInSquad(3, e)} /> Locked
-                <input type="text" placeholder="DEF 3" value={existingSquad[4].opta_code ?? ""} onChange={(e) => setPlayerInSquad(4, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="DEF" onChange={(opta_code) => setPlayerInSquad(4, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[4].locked} onChange={(e) => setLockPlayerInSquad(4, e)} /> Locked
-                <input type="text" placeholder="DEF 4" value={existingSquad[5].opta_code ?? ""} onChange={(e) => setPlayerInSquad(5, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="DEF" onChange={(opta_code) => setPlayerInSquad(5, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[5].locked} onChange={(e) => setLockPlayerInSquad(5, e)} /> Locked
-                <input type="text" placeholder="DEF 5" value={existingSquad[6].opta_code ?? ""} onChange={(e) => setPlayerInSquad(6, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="DEF" onChange={(opta_code) => setPlayerInSquad(6, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[6].locked} onChange={(e) => setLockPlayerInSquad(6, e)} /> Locked
             </div>
             <div>
-                MID
-                <input type="text" placeholder="MID 1" value={existingSquad[7].opta_code ?? ""} onChange={(e) => setPlayerInSquad(7, e)}/>
+                MIDs
+                <PlayerSearchInput players={players} preSetPosition="MID" onChange={(opta_code) => setPlayerInSquad(7, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[7].locked} onChange={(e) => setLockPlayerInSquad(7, e)} /> Locked
-                <input type="text" placeholder="MID 2" value={existingSquad[8].opta_code ?? ""} onChange={(e) => setPlayerInSquad(8, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="MID" onChange={(opta_code) => setPlayerInSquad(8, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[8].locked} onChange={(e) => setLockPlayerInSquad(8, e)} /> Locked
-                <input type="text" placeholder="MID 3" value={existingSquad[9].opta_code ?? ""} onChange={(e) => setPlayerInSquad(9, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="MID" onChange={(opta_code) => setPlayerInSquad(9, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[9].locked} onChange={(e) => setLockPlayerInSquad(9, e)} /> Locked
-                <input type="text" placeholder="MID 4" value={existingSquad[10].opta_code ?? ""} onChange={(e) => setPlayerInSquad(10, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="MID" onChange={(opta_code) => setPlayerInSquad(10, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[10].locked} onChange={(e) => setLockPlayerInSquad(10, e)} /> Locked
-                <input type="text" placeholder="MID 5" value={existingSquad[11].opta_code ?? ""} onChange={(e) => setPlayerInSquad(11, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="MID" onChange={(opta_code) => setPlayerInSquad(11, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[11].locked} onChange={(e) => setLockPlayerInSquad(11, e)} /> Locked
             </div>
             <div>
-                FWD
-                <input type="text" placeholder="FWD 1" value={existingSquad[12].opta_code ?? ""} onChange={(e) => setPlayerInSquad(12, e)}/>
+                FWDs
+                <PlayerSearchInput players={players} preSetPosition="FWD" onChange={(opta_code) => setPlayerInSquad(12, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[12].locked} onChange={(e) => setLockPlayerInSquad(12, e)} /> Locked
-                <input type="text" placeholder="FWD 2" value={existingSquad[13].opta_code ?? ""} onChange={(e) => setPlayerInSquad(13, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="FWD" onChange={(opta_code) => setPlayerInSquad(13, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[13].locked} onChange={(e) => setLockPlayerInSquad(13, e)} /> Locked
-                <input type="text" placeholder="FWD 3" value={existingSquad[14].opta_code ?? ""} onChange={(e) => setPlayerInSquad(14, e)}/>
+                <PlayerSearchInput players={players} preSetPosition="FWD" onChange={(opta_code) => setPlayerInSquad(14, opta_code)}/>
                 <input type="checkbox" checked={existingSquad[14].locked} onChange={(e) => setLockPlayerInSquad(14, e)} /> Locked
             </div>
         </div>
