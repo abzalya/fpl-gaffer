@@ -2,6 +2,7 @@
 //Version: 1.0.0
 
 import { EnrichedPlayer } from "@/lib/enrichment";
+
 type Props = {
     squad: EnrichedPlayer[];
 };
