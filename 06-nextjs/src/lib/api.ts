@@ -89,7 +89,8 @@ export type OptimizeRequest = {
 export async function getPlayers(): Promise<PlayerResponse[]> {
     const response = await fetch(`${API_URL}/players`, {next: {revalidate: 43200}});
     if (!response.ok) throw new Error(`Failed to fetch players: ${response.status}`);
-    return response.json();
+    const data: PlayerResponse[] = await response.json();
+    return data.map(p => ({ ...p, price: Number(p.price) }));
 }
 export async function getNextGameweek(): Promise<GameweekResponse> {
     const response = await fetch(`${API_URL}/gameweek/next`, {next: {revalidate: 43200}});
@@ -103,5 +104,20 @@ export async function postOptimize(req: OptimizeRequest): Promise<OptimizeRespon
         body: JSON.stringify(req),
     });
     if (!response.ok) throw new Error(`Failed to optimize squad: ${response.status}`);
-    return response.json();
+    const data: OptimizeResponse = await response.json();
+    // coerce string numbers from API to numbers
+    if (data.squad?.squad) {
+        data.squad.squad = data.squad.squad.map(p => ({
+            ...p,
+            price: Number(p.price),
+            expected_pts: p.expected_pts.map(ep => ({ ...ep, pts: Number(ep.pts) })),
+        }));
+    }
+    if (data.transfers_in?.transfers) {
+        data.transfers_in.transfers = data.transfers_in.transfers.map(t => ({ ...t, price: Number(t.price) }));
+    }
+    if (data.transfers_out?.transfers) {
+        data.transfers_out.transfers = data.transfers_out.transfers.map(t => ({ ...t, price: Number(t.price) }));
+    }
+    return data;
 }

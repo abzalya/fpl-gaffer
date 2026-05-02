@@ -22,9 +22,10 @@ build/
 # macOS
 .DS_Store
 
-# IDE
+# IDE / AI tooling
 .vscode/
 .idea/
+.claude/
 
 # dbt
 target/
