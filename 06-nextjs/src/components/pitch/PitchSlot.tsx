@@ -5,7 +5,11 @@ import { StatusOverlay } from './StatusOverlay';
 import { GwColumn } from './GwColumn';
 import { useTheme } from '@/contexts/ThemeContext';
 import { EnrichedPlayer } from '@/lib/enrichment';
-import { PlayerResponse } from '@/lib/api';
+import { PlayerResponse, FixtureResponse } from '@/lib/api';
+
+const DIFF_COLORS: Record<number, string> = {
+  1: '#16a34a', 2: '#4ade80', 3: '#facc15', 4: '#f97316', 5: '#dc2626',
+};
 
 export type PlayerWithLocked = PlayerResponse & { locked: boolean };
 
@@ -27,6 +31,7 @@ interface PitchSlotProps {
   transferIn?: boolean;
   transferOut?: boolean;
   gwCols?: GwColData[];
+  clubOverCap?: boolean;
 }
 
 const SLOT_SIZE = 54;
@@ -50,6 +55,7 @@ export function PitchSlot({
   transferIn,
   transferOut,
   gwCols = [],
+  clubOverCap = false,
 }: PitchSlotProps) {
   const theme = useTheme();
   const [hovered, setHovered] = useState(false);
@@ -104,6 +110,9 @@ export function PitchSlot({
   const locked = isLocked(player);
   const status = 'status' in player ? (player as PlayerResponse).status : undefined;
   const captain = isEnriched(player) ? player.is_captain : false;
+  const firstFixture: FixtureResponse | undefined = !resultsMode
+    ? (player as PlayerResponse).fixtures?.[0]
+    : undefined;
 
   return (
     <div
@@ -153,6 +162,26 @@ export function PitchSlot({
               <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
             </svg>
           </div>
+        )}
+        {/* Club cap warning badge */}
+        {!resultsMode && clubOverCap && (
+          <div style={{
+            position: 'absolute',
+            top: -4,
+            left: -4,
+            width: 14,
+            height: 14,
+            borderRadius: '50%',
+            background: '#f59e0b',
+            border: '1.5px solid rgba(255,255,255,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 6,
+            fontSize: 8,
+            fontWeight: 700,
+            color: '#fff',
+          }}>!</div>
         )}
         {/* Hover action buttons in setup mode */}
         {!resultsMode && hovered && (
@@ -218,6 +247,21 @@ export function PitchSlot({
           fontFamily: 'var(--font-dm-mono), DM Mono, monospace',
         }}>
           £{player.price.toFixed(1)}
+        </div>
+      )}
+
+      {/* Fixture pip - setup mode only */}
+      {!resultsMode && firstFixture && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <div style={{
+            width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
+            background: firstFixture.difficulty != null
+              ? (DIFF_COLORS[firstFixture.difficulty] ?? '#9ca3af')
+              : '#9ca3af',
+          }}/>
+          <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>
+            {firstFixture.opponent}{firstFixture.is_home != null ? (firstFixture.is_home ? 'H' : 'A') : ''}
+          </span>
         </div>
       )}
 

@@ -24,11 +24,12 @@ interface PlayerPickerProps {
   filterPosition: string | null;
   currentSquad: PlayerResponse[];
   allPlayers: PlayerResponse[];
+  clubCounts?: Record<string, number>;
   onSelect: (player: PlayerResponse) => void;
   onClose: () => void;
 }
 
-export function PlayerPicker({ filterPosition, currentSquad, allPlayers, onSelect, onClose }: PlayerPickerProps) {
+export function PlayerPicker({ filterPosition, currentSquad, allPlayers, clubCounts = {}, onSelect, onClose }: PlayerPickerProps) {
   const theme = useTheme();
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('predicted_pts_h1');
@@ -183,21 +184,23 @@ export function PlayerPicker({ filterPosition, currentSquad, allPlayers, onSelec
             const firstFixture = player.fixtures?.[0];
             const xpVal = player[sortKey] != null ? Number(player[sortKey]) : null;
             const statusDot = player.status === 'd';
+            const atCap = (clubCounts[player.club_short] ?? 0) >= 3;
 
             return (
               <div
                 key={player.opta_code}
-                onClick={() => { onSelect(player); onClose(); }}
+                onClick={atCap ? undefined : () => { onSelect(player); onClose(); }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
                   padding: '8px 16px',
                   borderBottom: `1px solid ${theme.border2}`,
-                  cursor: 'pointer',
+                  cursor: atCap ? 'not-allowed' : 'pointer',
+                  opacity: atCap ? 0.4 : 1,
                   transition: 'background 0.1s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = theme.bg1)}
+                onMouseEnter={e => { if (!atCap) e.currentTarget.style.background = theme.bg1; }}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 {/* Position badge */}

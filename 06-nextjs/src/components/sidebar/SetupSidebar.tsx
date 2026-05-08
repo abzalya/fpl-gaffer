@@ -11,6 +11,7 @@ interface SetupSidebarProps {
   freeTransfers: number;
   chip: string | null;
   squadCount: number;
+  squadValue: number;
   loading: boolean;
   error: string | null;
   onHorizon: (v: 1 | 2 | 3) => void;
@@ -49,7 +50,11 @@ const CHIPS = [
   { key: 'triple_captain', label: 'Triple Cap' },
 ];
 
-const HORIZON_GW_RANGES: Record<number, string> = { 1: '+1 GW', 2: '+2 GWs', 3: '+3 GWs' };
+function gwRangeLabel(h: number, gwId?: number): string {
+  if (!gwId) return '';
+  if (h === 1) return `GW${gwId}`;
+  return `GW${gwId}–${gwId + h - 1}`;
+}
 
 export function SetupSidebar({
   gameweek,
@@ -58,6 +63,7 @@ export function SetupSidebar({
   freeTransfers,
   chip,
   squadCount,
+  squadValue,
   loading,
   error,
   onHorizon,
@@ -141,7 +147,7 @@ export function SetupSidebar({
               }}
             >
               <span>{h}GW</span>
-              <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>{HORIZON_GW_RANGES[h]}</span>
+              <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>{gwRangeLabel(h, gameweek?.gameweek_id)}</span>
             </button>
           ))}
         </div>
@@ -149,9 +155,35 @@ export function SetupSidebar({
 
       <Divider/>
 
-      {/* Section 3: Bank */}
+      {/* Section 3: Budget */}
       <div>
-        <SectionLabel>Bank</SectionLabel>
+        <SectionLabel>Budget</SectionLabel>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+          <div style={{
+            flex: 1,
+            padding: '8px 10px',
+            borderRadius: 6,
+            background: theme.bg1,
+            border: `1px solid ${theme.border}`,
+          }}>
+            <div style={{ fontSize: 8, color: theme.text3, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 3 }}>Squad Value</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: theme.text1, fontFamily: 'var(--font-dm-mono), DM Mono, monospace' }}>
+              £{squadValue.toFixed(1)}
+            </div>
+          </div>
+          <div style={{
+            flex: 1,
+            padding: '8px 10px',
+            borderRadius: 6,
+            background: theme.bg1,
+            border: `1px solid ${theme.border}`,
+          }}>
+            <div style={{ fontSize: 8, color: theme.text3, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 3 }}>In The Bank</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: theme.accent, fontFamily: 'var(--font-dm-mono), DM Mono, monospace' }}>
+              £{bank.toFixed(1)}
+            </div>
+          </div>
+        </div>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -161,7 +193,7 @@ export function SetupSidebar({
           border: `1px solid ${theme.inputBorder}`,
           background: theme.inputBg,
         }}>
-          <span style={{ fontSize: 14, color: theme.text2, fontWeight: 600 }}>£</span>
+          <span style={{ fontSize: 11, color: theme.text3, fontWeight: 600 }}>ITB £</span>
           <input
             type="number"
             step={0.1}

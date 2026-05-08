@@ -18,6 +18,7 @@ interface PitchProps {
   transfersIn?: TransferResponse[];
   transfersOut?: TransferResponse[];
   horizon?: number;
+  clubCounts?: Record<string, number>;
 }
 
 const SETUP_COUNTS: Record<string, number> = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
@@ -73,6 +74,7 @@ export function Pitch({
   transfersIn = [],
   transfersOut = [],
   horizon = 1,
+  clubCounts = {},
 }: PitchProps) {
   const transferInCodes = new Set(transfersIn.map(t => t.opta_code));
   const transferOutCodes = new Set(transfersOut.map(t => t.opta_code));
@@ -181,6 +183,7 @@ export function Pitch({
                   transferIn={player ? transferInCodes.has(player.opta_code) : false}
                   transferOut={player ? transferOutCodes.has(player.opta_code) : false}
                   gwCols={player && resultsMode ? getGwCols(player) : []}
+                  clubOverCap={player ? (clubCounts[player.club_short] ?? 0) > 3 : false}
                 />
               ))}
             </div>

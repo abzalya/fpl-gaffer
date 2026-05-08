@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   getPlayers, getNextGameweek,
   PlayerResponse, GameweekResponse, OptimizeRequest,
@@ -15,6 +15,8 @@ import { PlayerPicker } from '@/components/PlayerPicker';
 import { AboutModal } from '@/components/AboutModal';
 
 export type PlayerWithLocked = PlayerResponse & { locked: boolean };
+
+const LS_SQUAD_KEY = 'fplg_squad';
 
 function AppShell() {
   const theme = useTheme();
@@ -33,10 +35,49 @@ function AppShell() {
 
   const { loading, error, result, run, reset } = useOptimise(allPlayers);
 
+  const hasRehydrated = useRef(false);
+
   useEffect(() => {
     getPlayers().then(setAllPlayers).catch(console.error);
     getNextGameweek().then(setGameweek).catch(console.error);
   }, []);
+
+  // Rehydrate squad from localStorage once allPlayers is available
+  useEffect(() => {
+    if (allPlayers.length === 0 || hasRehydrated.current) return;
+    hasRehydrated.current = true;
+    const stored = localStorage.getItem(LS_SQUAD_KEY);
+    if (!stored) return;
+    try {
+      const parsed: { opta_code: number; locked: boolean }[] = JSON.parse(stored);
+      const hydrated = parsed
+        .map(({ opta_code, locked }) => {
+          const player = allPlayers.find(p => p.opta_code === opta_code);
+          return player ? { ...player, locked } : null;
+        })
+        .filter((p): p is PlayerWithLocked => p !== null);
+      if (hydrated.length > 0) setSquad(hydrated);
+    } catch {}
+  }, [allPlayers]);
+
+  // Persist squad to localStorage (only after rehydration to avoid overwriting on mount)
+  useEffect(() => {
+    if (!hasRehydrated.current) return;
+    localStorage.setItem(LS_SQUAD_KEY, JSON.stringify(
+      squad.map(p => ({ opta_code: p.opta_code, locked: p.locked }))
+    ));
+  }, [squad]);
+
+  const clubCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of squad) counts[p.club_short] = (counts[p.club_short] ?? 0) + 1;
+    return counts;
+  }, [squad]);
+
+  const squadValue = useMemo(
+    () => squad.reduce((sum, p) => sum + p.price, 0),
+    [squad]
+  );
 
   function handleSlotClick(pos: string) {
     setPickerPosition(pos);
@@ -110,6 +151,7 @@ function AppShell() {
           alignItems: 'flex-start',
           justifyContent: 'center',
           padding: '16px 12px 24px',
+          position: 'relative',
         }}>
           <div className="fade-in">
             <Pitch
@@ -121,8 +163,21 @@ function AppShell() {
               transfersIn={transfersIn}
               transfersOut={transfersOut}
               horizon={horizon}
+              clubCounts={phase === 'setup' ? clubCounts : undefined}
             />
           </div>
+          {/* Loading overlay — blocks interaction while optimiser runs */}
+          {loading && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(0,0,0,0.18)',
+              backdropFilter: 'blur(1px)',
+              zIndex: 20,
+              pointerEvents: 'all',
+              cursor: 'not-allowed',
+            }}/>
+          )}
         </div>
 
         {/* 30% sidebar */}
@@ -139,6 +194,7 @@ function AppShell() {
               freeTransfers={freeTransfers}
               chip={chip}
               squadCount={squad.length}
+              squadValue={squadValue}
               loading={loading}
               error={error}
               onHorizon={setHorizon}
@@ -165,6 +221,7 @@ function AppShell() {
           filterPosition={pickerPosition}
           currentSquad={squad}
           allPlayers={allPlayers}
+          clubCounts={clubCounts}
           onSelect={handleSelectPlayer}
           onClose={() => setPickerOpen(false)}
         />
