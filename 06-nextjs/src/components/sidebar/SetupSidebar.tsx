@@ -349,17 +349,17 @@ export function SetupSidebar({
       {/* Optimise button */}
       <button
         onClick={onOptimise}
-        disabled={loading || squadCount === 0}
+        disabled={loading}
         style={{
           width: '100%',
           padding: '11px 16px',
           borderRadius: 8,
           border: 'none',
-          background: loading || squadCount === 0 ? theme.bg3 : theme.accent,
-          color: loading || squadCount === 0 ? theme.text3 : theme.btnText,
+          background: loading ? theme.bg3 : theme.accent,
+          color: loading ? theme.text3 : theme.btnText,
           fontSize: 13,
           fontWeight: 700,
-          cursor: loading || squadCount === 0 ? 'not-allowed' : 'pointer',
+          cursor: loading ? 'not-allowed' : 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -379,6 +379,17 @@ export function SetupSidebar({
         )}
         {loading ? 'Optimising…' : 'Optimise Squad'}
       </button>
+      {squadCount === 0 && (
+        <div style={{
+          textAlign: 'center',
+          fontSize: 10,
+          color: theme.text3,
+          fontFamily: 'var(--font-dm-mono), DM Mono, monospace',
+          letterSpacing: '0.04em',
+        }}>
+          building new team
+        </div>
+      )}
     </div>
   );
 }

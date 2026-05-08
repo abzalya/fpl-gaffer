@@ -117,13 +117,11 @@ export function Pitch({
     const ep = player as EnrichedPlayer;
     if (!ep.expected_pts) return [];
     return ep.expected_pts.slice(0, horizon).map((pt, i) => {
-      const fix = ep.fixtures?.find(f => f.horizon === i + 1);
+      const fixes = ep.fixtures?.filter(f => f.horizon === i + 1) ?? [];
       return {
         label: `GW${pt.gw}`,
         xp: pt.pts,
-        opponent: fix?.opponent,
-        isHome: fix?.is_home,
-        difficulty: fix?.difficulty,
+        fixtures: fixes.map(f => ({ opponent: f.opponent, isHome: f.is_home, difficulty: f.difficulty })),
       };
     });
   }

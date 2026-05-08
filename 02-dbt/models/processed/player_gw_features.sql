@@ -2,14 +2,11 @@
 -- Layer: processed (ML feature matrix)
 -- Grain: one row per (opta_code, gameweek_id, season_id)
 -- Purpose: Computes all ML features from player_gw_base using backward-only window functions.
--- Version: V1.0.3
+-- Version: V1.1.0
 
 -- Sources:
 -- {{ ref('player_gw_base') }}
 -- archive.player_future_fixtures
-
--- Note: Double gameweeks may produce multiple rows per horizon from player_future_fixtures.
---       Handle in downstream training code or add aggregation logic here if needed.
 
 {{
     config(
@@ -19,6 +16,18 @@
         incremental_strategy='delete+insert'
     )
 }}
+
+with fixture_agg as (
+    select
+        opta_code,
+        fixture_gameweek_id,
+        count(*)                                                                    as fixture_count,
+        avg(difficulty)                                                             as difficulty,
+        bool_or(is_home)                                                            as is_home,
+        (array_agg(case when is_home then team_a else team_h end order by difficulty desc))[1] as opponent_team_id
+    from archive.player_future_fixtures
+    group by opta_code, fixture_gameweek_id
+)
 
 select
     --identifiers
@@ -43,12 +52,12 @@ select
     --lag features (target column context)
     --gw-1
     lag(total_points,     1) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) pts_lag_1,
-    lag(opponent_team_id, 1) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) opponent_team_id_lag_1,
+    lag(pgb.opponent_team_id, 1) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) opponent_team_id_lag_1,
     lag(opponent_strength,1) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) opponent_strength_lag_1,
     lag(was_home,         1) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) fixture_is_home_lag_1,
     --gw-2
     lag(total_points,     2) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) pts_lag_2,
-    lag(opponent_team_id, 2) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) opponent_team_id_lag_2,
+    lag(pgb.opponent_team_id, 2) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) opponent_team_id_lag_2,
     lag(opponent_strength,2) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) opponent_strength_lag_2,
     lag(was_home,         2) over (partition by pgb.opta_code, pgb.season_id order by pgb.gameweek_id) fixture_is_home_lag_2,
     --current GW performance
@@ -148,22 +157,21 @@ select
     pgb.chance_of_playing_next_round,
     pgb.now_cost
 from {{ ref('player_gw_base') }} pgb
---joins for future fixtures
---fetched_gameweek_id intentionally excluded: constraint is (opta_code, fixture_id) so one row per fixture exists.
---lead() fallback in fixture_horizon handles rows where the future GW has since been played.
-left join archive.player_future_fixtures f1
+--fixture_agg CTE ensures one row per (opta_code, fixture_gameweek_id):
+--  DGW players get fixture_count=2, avg difficulty, hardest opponent_team_id
+--  BGW players have no row so fixture_count falls back to 0 via the macro coalesce
+left join fixture_agg f1
     on  f1.opta_code = pgb.opta_code and f1.fixture_gameweek_id = pgb.gameweek_id + 1
-left join archive.player_future_fixtures f2
+left join fixture_agg f2
     on  f2.opta_code = pgb.opta_code and f2.fixture_gameweek_id = pgb.gameweek_id + 2
-left join archive.player_future_fixtures f3
+left join fixture_agg f3
     on  f3.opta_code = pgb.opta_code and f3.fixture_gameweek_id = pgb.gameweek_id + 3
---opponent team strength per horizon (used by fixture_horizon macro to coalesce opponent_strength)
 left join archive.teams t1
-    on  t1.team_id = case when f1.is_home then f1.team_a else f1.team_h end and t1.season_id = pgb.season_id
+    on  t1.team_id = f1.opponent_team_id and t1.season_id = pgb.season_id
 left join archive.teams t2
-    on  t2.team_id = case when f2.is_home then f2.team_a else f2.team_h end and t2.season_id = pgb.season_id
+    on  t2.team_id = f2.opponent_team_id and t2.season_id = pgb.season_id
 left join archive.teams t3
-    on  t3.team_id = case when f3.is_home then f3.team_a else f3.team_h end and t3.season_id = pgb.season_id
+    on  t3.team_id = f3.opponent_team_id and t3.season_id = pgb.season_id
 
 {% if is_incremental() %}
 where pgb.gameweek_id > (

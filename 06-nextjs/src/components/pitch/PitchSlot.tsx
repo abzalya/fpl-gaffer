@@ -16,9 +16,7 @@ export type PlayerWithLocked = PlayerResponse & { locked: boolean };
 type GwColData = {
   label: string;
   xp: number | null;
-  opponent?: string;
-  isHome?: boolean | null;
-  difficulty?: number | null;
+  fixtures: { opponent?: string; isHome?: boolean | null; difficulty?: number | null }[];
 };
 
 interface PitchSlotProps {
@@ -110,9 +108,9 @@ export function PitchSlot({
   const locked = isLocked(player);
   const status = 'status' in player ? (player as PlayerResponse).status : undefined;
   const captain = isEnriched(player) ? player.is_captain : false;
-  const firstFixture: FixtureResponse | undefined = !resultsMode
-    ? (player as PlayerResponse).fixtures?.[0]
-    : undefined;
+  const h1Fixtures: FixtureResponse[] = !resultsMode
+    ? ((player as PlayerResponse).fixtures?.filter(f => f.horizon === 1) ?? [])
+    : [];
 
   return (
     <div
@@ -250,18 +248,22 @@ export function PitchSlot({
         </div>
       )}
 
-      {/* Fixture pip - setup mode only */}
-      {!resultsMode && firstFixture && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <div style={{
-            width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
-            background: firstFixture.difficulty != null
-              ? (DIFF_COLORS[firstFixture.difficulty] ?? '#9ca3af')
-              : '#9ca3af',
-          }}/>
-          <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>
-            {firstFixture.opponent}{firstFixture.is_home != null ? (firstFixture.is_home ? 'H' : 'A') : ''}
-          </span>
+      {/* Fixture pips - setup mode only; shows both for DGW */}
+      {!resultsMode && h1Fixtures.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+          {h1Fixtures.map((fix, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <div style={{
+                width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
+                background: fix.difficulty != null
+                  ? (DIFF_COLORS[fix.difficulty] ?? '#9ca3af')
+                  : '#9ca3af',
+              }}/>
+              <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>
+                {fix.opponent}{fix.is_home != null ? (fix.is_home ? 'H' : 'A') : ''}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -273,9 +275,7 @@ export function PitchSlot({
               key={i}
               gwLabel={col.label}
               xp={col.xp}
-              opponent={col.opponent}
-              isHome={col.isHome}
-              difficulty={col.difficulty}
+              fixtures={col.fixtures}
             />
           ))}
         </div>

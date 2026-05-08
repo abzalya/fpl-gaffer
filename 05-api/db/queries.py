@@ -1,6 +1,6 @@
 # Load the predictions from ml.predictions and training data from ml.training_runs
 # Returns a DataFrame
-# Version: 1.0.0
+# Version: 1.1.0
 
 import pandas as pd
 from db.engine import engine
@@ -26,15 +26,31 @@ def load_players():
             from processed.player_gw_features
             where season_id = (select season_id from current_season)
         ),
+        -- aggregate raw fixtures into a JSON array per (player, gw).
+        -- DGW players get two entries; BGW players get no row (null join = empty fixtures).
+        player_fixtures_json as (
+            select
+                f.opta_code,
+                f.fixture_gameweek_id,
+                json_agg(json_build_object(
+                    'is_home',     f.is_home,
+                    'difficulty',  f.difficulty,
+                    'opponent',    t.short_name
+                ) order by f.difficulty desc) as fixtures
+            from archive.player_future_fixtures f
+            join public.teams t
+                on  t.team_id    = case when f.is_home then f.team_a else f.team_h end
+                and t.season_id  = (select season_id from current_season)
+            where f.fixture_gameweek_id in (
+                (select max_gw + 1 from global_max_gw),
+                (select max_gw + 2 from global_max_gw),
+                (select max_gw + 3 from global_max_gw)
+            )
+            group by f.opta_code, f.fixture_gameweek_id
+        ),
         latest_features as (
-            -- distinct on gets the latest row per player regardless of which GW it's from.
-            -- is_stale flags players whose last features predate the global max GW (i.e. they
-            -- had a blank gameweek). Their h1 fixture column points at the blank GW (null), so
-            -- we shift: display h1 <- feature h2, display h2 <- feature h3, display h3 <- null.
-            select distinct on (f.opta_code) f.*,
-                f.gameweek_id < g.max_gw as is_stale
+            select distinct on (f.opta_code) f.*
             from processed.player_gw_features f
-            cross join global_max_gw g
             where f.season_id = (select season_id from current_season)
             order by f.opta_code, f.gameweek_id desc
         ),
@@ -54,42 +70,36 @@ def load_players():
         )
         select
             f.opta_code,
-            p.web_name                                                                    as name,
-            t.name                                                                        as club,
-            t.short_name                                                                  as club_short,
+            p.web_name                              as name,
+            t.name                                  as club,
+            t.short_name                            as club_short,
             case f.element_type
                 when 1 then 'GKP'
                 when 2 then 'DEF'
                 when 3 then 'MID'
                 when 4 then 'FWD'
-            end                                                                           as position,
-            round(f.now_cost::numeric / 10, 1)                                           as price,
+            end                                     as position,
+            round(f.now_cost::numeric / 10, 1)      as price,
             f.status,
-            round(pred.predicted_pts_h1::numeric, 2)                                     as predicted_pts_h1,
-            round(pred.predicted_pts_h2::numeric, 2)                                     as predicted_pts_h2,
-            round(pred.predicted_pts_h3::numeric, 2)                                     as predicted_pts_h3,
-            case when f.is_stale then f.fixture_is_home_h2    else f.fixture_is_home_h1    end as h1_is_home,
-            case when f.is_stale then f.fixture_difficulty_h2 else f.fixture_difficulty_h1 end as h1_difficulty,
-            case when f.is_stale then t_opp2.short_name        else t_opp1.short_name        end as h1_opponent,
-            case when f.is_stale then f.fixture_is_home_h3    else f.fixture_is_home_h2    end as h2_is_home,
-            case when f.is_stale then f.fixture_difficulty_h3 else f.fixture_difficulty_h2 end as h2_difficulty,
-            case when f.is_stale then t_opp3.short_name        else t_opp2.short_name        end as h2_opponent,
-            case when f.is_stale then null                     else f.fixture_is_home_h3    end as h3_is_home,
-            case when f.is_stale then null                     else f.fixture_difficulty_h3 end as h3_difficulty,
-            case when f.is_stale then null                     else t_opp3.short_name        end as h3_opponent
+            round(pred.predicted_pts_h1::numeric, 2) as predicted_pts_h1,
+            round(pred.predicted_pts_h2::numeric, 2) as predicted_pts_h2,
+            round(pred.predicted_pts_h3::numeric, 2) as predicted_pts_h3,
+            fh1.fixtures                             as h1_fixtures,
+            fh2.fixtures                             as h2_fixtures,
+            fh3.fixtures                             as h3_fixtures
         from latest_features f
         join public.players p
-            on p.opta_code = f.opta_code and p.season_id = (select season_id from current_season)
+            on  p.opta_code  = f.opta_code and p.season_id = (select season_id from current_season)
         join public.teams t
-            on t.team_id = f.team_id and t.season_id = (select season_id from current_season)
+            on  t.team_id    = f.team_id   and t.season_id = (select season_id from current_season)
         left join pivoted_predictions pred
-            on pred.opta_code = f.opta_code
-        left join public.teams t_opp1
-            on t_opp1.team_id = f.opponent_team_id_h1 and t_opp1.season_id = (select season_id from current_season)
-        left join public.teams t_opp2
-            on t_opp2.team_id = f.opponent_team_id_h2 and t_opp2.season_id = (select season_id from current_season)
-        left join public.teams t_opp3
-            on t_opp3.team_id = f.opponent_team_id_h3 and t_opp3.season_id = (select season_id from current_season)
+            on  pred.opta_code = f.opta_code
+        left join player_fixtures_json fh1
+            on  fh1.opta_code = f.opta_code and fh1.fixture_gameweek_id = (select max_gw + 1 from global_max_gw)
+        left join player_fixtures_json fh2
+            on  fh2.opta_code = f.opta_code and fh2.fixture_gameweek_id = (select max_gw + 2 from global_max_gw)
+        left join player_fixtures_json fh3
+            on  fh3.opta_code = f.opta_code and fh3.fixture_gameweek_id = (select max_gw + 3 from global_max_gw)
         order by f.element_type, pred.predicted_pts_h1 desc nulls last
     """
     df = pd.read_sql(query, engine)

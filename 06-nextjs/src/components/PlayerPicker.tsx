@@ -181,7 +181,7 @@ export function PlayerPicker({ filterPosition, currentSquad, allPlayers, clubCou
         {/* Player list */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {filtered.map(player => {
-            const firstFixture = player.fixtures?.[0];
+            const h1Fixtures = player.fixtures?.filter(f => f.horizon === 1) ?? [];
             const xpVal = player[sortKey] != null ? Number(player[sortKey]) : null;
             const statusDot = player.status === 'd';
             const atCap = (clubCounts[player.club_short] ?? 0) >= 3;
@@ -246,27 +246,31 @@ export function PlayerPicker({ filterPosition, currentSquad, allPlayers, clubCou
                   <div style={{ fontSize: 10, color: theme.text2 }}>{player.club}</div>
                 </div>
 
-                {/* Fixture */}
-                {firstFixture && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    flexShrink: 0,
-                    minWidth: 70,
-                  }}>
-                    <div style={{
-                      width: 7, height: 7, borderRadius: '50%',
-                      background: firstFixture.difficulty != null
-                        ? (DIFF_COLORS[firstFixture.difficulty] ?? '#9ca3af')
-                        : '#9ca3af',
-                      flexShrink: 0,
-                    }}/>
-                    <span style={{ fontSize: 11, color: theme.text2 }}>
-                      {firstFixture.opponent}{firstFixture.is_home != null ? (firstFixture.is_home ? ' H' : ' A') : ''}
-                    </span>
-                  </div>
-                )}
+                {/* Fixtures — shows both for DGW */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  flexShrink: 0,
+                  minWidth: 70,
+                }}>
+                  {h1Fixtures.length > 0 ? h1Fixtures.map((fix, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{
+                        width: 7, height: 7, borderRadius: '50%',
+                        background: fix.difficulty != null
+                          ? (DIFF_COLORS[fix.difficulty] ?? '#9ca3af')
+                          : '#9ca3af',
+                        flexShrink: 0,
+                      }}/>
+                      <span style={{ fontSize: 11, color: theme.text2 }}>
+                        {fix.opponent}{fix.is_home != null ? (fix.is_home ? ' H' : ' A') : ''}
+                      </span>
+                    </div>
+                  )) : (
+                    <span style={{ fontSize: 10, color: theme.text3 }}>BGW</span>
+                  )}
+                </div>
 
                 {/* xP */}
                 <div style={{

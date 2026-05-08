@@ -21,12 +21,16 @@ function DiffPip({ difficulty }: { difficulty: number | null }) {
   );
 }
 
-export function GwColumn({ gwLabel, xp, opponent, isHome, difficulty }: {
-  gwLabel: string;
-  xp: number | null;
+type FixtureItem = {
   opponent?: string;
   isHome?: boolean | null;
   difficulty?: number | null;
+};
+
+export function GwColumn({ gwLabel, xp, fixtures }: {
+  gwLabel: string;
+  xp: number | null;
+  fixtures: FixtureItem[];
 }) {
   const xpVal = xp ?? 0;
   let xpBg = 'rgba(0,0,0,0.15)';
@@ -69,16 +73,24 @@ export function GwColumn({ gwLabel, xp, opponent, isHome, difficulty }: {
       }}>
         {xpVal.toFixed(1)}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <DiffPip difficulty={difficulty ?? null}/>
-        {opponent && (
-          <span style={{
-            fontSize: 6,
-            color: 'rgba(255,255,255,0.5)',
-            fontFamily: 'var(--font-dm-mono), DM Mono, monospace',
-            textTransform: 'uppercase',
-          }}>
-            {opponent}{isHome != null ? (isHome ? 'H' : 'A') : ''}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        {fixtures.length > 0 ? fixtures.map((fix, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <DiffPip difficulty={fix.difficulty ?? null}/>
+            {fix.opponent && (
+              <span style={{
+                fontSize: 6,
+                color: 'rgba(255,255,255,0.5)',
+                fontFamily: 'var(--font-dm-mono), DM Mono, monospace',
+                textTransform: 'uppercase',
+              }}>
+                {fix.opponent}{fix.isHome != null ? (fix.isHome ? 'H' : 'A') : ''}
+              </span>
+            )}
+          </div>
+        )) : (
+          <span style={{ fontSize: 6, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-dm-mono), DM Mono, monospace' }}>
+            BGW
           </span>
         )}
       </div>
